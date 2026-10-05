@@ -80,3 +80,9 @@ fun DocumentSnapshot.toHogar(): Hogar = Hogar(
     miembros = (get("miembros") as? List<String>).orEmpty(),
     creadoPor = getString("creadoPor").orEmpty(),
 )
+
+/** Mapa para restaurar un movimiento borrado (deshacer): conserva autor y fecha de creación. */
+fun Movimiento.toMapRestaurar(): Map<String, Any> = toMapNuevo() + mapOf(
+    "creadoPor" to creadoPor,
+    "creadoEn" to (creadoEn?.let { com.google.firebase.Timestamp(it) } ?: FieldValue.serverTimestamp()),
+)

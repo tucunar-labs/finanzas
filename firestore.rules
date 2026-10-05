@@ -88,8 +88,9 @@ service cloud.firestore {
             && d.creadoEn is timestamp;
         }
         allow read: if esMiembro(hid);
+        // creadoPor puede ser el otro miembro al restaurar un movimiento borrado (deshacer).
         allow create: if seraMiembro(hid) && movimientoValido(request.resource.data)
-          && request.resource.data.creadoPor == request.auth.uid;
+          && request.resource.data.creadoPor in getAfter(rutaHogar(hid)).data.miembros;
         allow update: if esMiembro(hid) && movimientoValido(request.resource.data)
           && request.resource.data.creadoPor == resource.data.creadoPor
           && request.resource.data.creadoEn == resource.data.creadoEn;

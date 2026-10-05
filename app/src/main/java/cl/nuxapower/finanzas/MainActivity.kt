@@ -21,7 +21,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.nuxapower.finanzas.data.repo.Sesion
 import cl.nuxapower.finanzas.data.repo.SesionRepository
-import cl.nuxapower.finanzas.ui.home.HomeScreen
+import cl.nuxapower.finanzas.ui.AppPrincipal
 import cl.nuxapower.finanzas.ui.hogar.HogarSetupScreen
 import cl.nuxapower.finanzas.ui.login.LoginScreen
 import cl.nuxapower.finanzas.ui.theme.FinanzasTheme
@@ -46,13 +46,18 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun Raiz(vm: RaizViewModel = hiltViewModel()) {
     val sesion by vm.sesion.collectAsStateWithLifecycle()
+    // Con hogar, la app principal maneja su propio Scaffold (barra inferior y snackbars).
+    if (sesion is Sesion.ConHogar) {
+        AppPrincipal()
+        return
+    }
     Scaffold { padding ->
         val m = Modifier.padding(padding)
         when (val s = sesion) {
             Sesion.Cargando -> Centro(m) { CircularProgressIndicator() }
             Sesion.SinLogin -> Box(m) { LoginScreen() }
             is Sesion.SinHogar -> Box(m) { HogarSetupScreen() }
-            is Sesion.ConHogar -> HomeScreen(m)
+            is Sesion.ConHogar -> Unit
             is Sesion.Error -> Centro(m) {
                 Text(s.mensaje, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(32.dp))
             }
