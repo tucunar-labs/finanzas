@@ -59,6 +59,11 @@ class DominioTest {
         assertEquals(0.75f, r.gastoPorCategoria[0].fraccion, 0.001f)
         assertEquals(20_000, r.gastoPorCategoria[0].montoMesAnterior)
         assertEquals(listOf("Alonso" to 30_000L, "Cata" to 10_000L), r.gastoPorPersona.map { it.nombre to it.monto })
+        assertEquals(listOf("Sueldo" to 1_000_000L), r.ingresoPorCategoria.map { it.nombre to it.monto })
+        assertEquals(800_000, r.ingresoPorCategoria[0].montoMesAnterior)
+        assertEquals(6, r.tendencia.size)
+        assertEquals(YearMonth.of(2026, 5), r.tendencia.first().mes)
+        assertEquals(listOf(800_000L to 20_000L, 1_000_000L to 40_000L), r.tendencia.takeLast(2).map { it.ingresos to it.gastos })
     }
 
     @Test fun variacionPorcentual() {

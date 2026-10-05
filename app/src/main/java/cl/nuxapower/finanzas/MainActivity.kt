@@ -1,5 +1,6 @@
 package cl.nuxapower.finanzas
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,7 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import cl.nuxapower.finanzas.data.model.Tipo
 import cl.nuxapower.finanzas.data.repo.Sesion
+import cl.nuxapower.finanzas.data.repo.Solicitudes
 import cl.nuxapower.finanzas.data.repo.SesionRepository
 import cl.nuxapower.finanzas.ui.AppPrincipal
 import cl.nuxapower.finanzas.ui.hogar.HogarSetupScreen
@@ -36,10 +39,25 @@ class RaizViewModel @Inject constructor(sesion: SesionRepository) : ViewModel() 
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject lateinit var solicitudes: Solicitudes
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) leerAtajo(intent)
         enableEdgeToEdge()
         setContent { FinanzasTheme { Raiz() } }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        leerAtajo(intent)
+    }
+
+    /** Atajos "Nuevo gasto"/"Nuevo ingreso" del launcher: preseleccionan el tipo en el ingreso rápido. */
+    private fun leerAtajo(intent: Intent?) {
+        val tipo = intent?.getStringExtra("tipo") ?: return
+        runCatching { Tipo.valueOf(tipo) }.getOrNull()?.let { solicitudes.tipoIngreso.value = it }
     }
 }
 

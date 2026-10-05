@@ -48,6 +48,7 @@ fun DocumentSnapshot.toMovimiento(): Movimiento? {
         nota = getString("nota").orEmpty(),
         creadoPor = getString("creadoPor").orEmpty(),
         creadoEn = getTimestamp("creadoEn")?.toInstant(),
+        pendiente = metadata.hasPendingWrites(),
     )
 }
 

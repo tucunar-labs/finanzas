@@ -17,6 +17,8 @@ data class Parte(
     val montoMesAnterior: Long = 0,
 )
 
+data class PuntoMes(val mes: YearMonth, val ingresos: Long, val gastos: Long)
+
 data class Resumen(
     val mes: YearMonth,
     val ingresos: Long,
@@ -25,6 +27,9 @@ data class Resumen(
     val gastosMesAnterior: Long,
     val gastoPorCategoria: List<Parte>,
     val gastoPorPersona: List<Parte>,
+    val ingresoPorCategoria: List<Parte> = emptyList(),
+    /** Últimos 6 meses terminando en [mes], del más antiguo al más reciente. */
+    val tendencia: List<PuntoMes> = emptyList(),
 ) {
     val balance: Long get() = ingresos - gastos
     val balanceMesAnterior: Long get() = ingresosMesAnterior - gastosMesAnterior
@@ -46,26 +51,30 @@ fun calcularResumen(
 
     val gastos = delMes.filter { it.tipo == Tipo.GASTO }
     val totalGastos = gastos.sumOf { it.monto }
-    val gastosAnteriorPorCat = anterior.filter { it.tipo == Tipo.GASTO }
-        .groupBy { it.categoriaId }.mapValues { (_, l) -> l.sumOf { it.monto } }
     val catPorId = categorias.associateBy { it.id }
     val personaPorId = personas.associateBy { it.id }
 
     fun fraccion(m: Long) = if (totalGastos == 0L) 0f else m.toFloat() / totalGastos
 
-    val porCategoria = gastos.groupBy { it.categoriaId }.map { (id, l) ->
-        val c = catPorId[id]
-        val monto = l.sumOf { it.monto }
-        Parte(
-            id = id,
-            nombre = c?.nombre ?: "Sin categoría",
-            icono = c?.icono ?: "❔",
-            color = c?.color ?: 0xFF9E9E9E,
-            monto = monto,
-            fraccion = fraccion(monto),
-            montoMesAnterior = gastosAnteriorPorCat[id] ?: 0,
-        )
-    }.sortedByDescending { it.monto }
+    fun porCategoria(tipo: Tipo): List<Parte> {
+        val actuales = delMes.filter { it.tipo == tipo }
+        val total = actuales.sumOf { it.monto }
+        val previos = anterior.filter { it.tipo == tipo }
+            .groupBy { it.categoriaId }.mapValues { (_, l) -> l.sumOf { it.monto } }
+        return actuales.groupBy { it.categoriaId }.map { (id, l) ->
+            val c = catPorId[id]
+            val monto = l.sumOf { it.monto }
+            Parte(
+                id = id,
+                nombre = c?.nombre ?: "Sin categoría",
+                icono = c?.icono ?: "❔",
+                color = c?.color ?: 0xFF9E9E9E,
+                monto = monto,
+                fraccion = if (total == 0L) 0f else monto.toFloat() / total,
+                montoMesAnterior = previos[id] ?: 0,
+            )
+        }.sortedByDescending { it.monto }
+    }
 
     val porPersona = gastos.groupBy { it.personaId }.map { (id, l) ->
         val p = personaPorId[id]
@@ -79,7 +88,13 @@ fun calcularResumen(
         gastos = totalGastos,
         ingresosMesAnterior = anterior.total(Tipo.INGRESO),
         gastosMesAnterior = anterior.total(Tipo.GASTO),
-        gastoPorCategoria = porCategoria,
+        gastoPorCategoria = porCategoria(Tipo.GASTO),
         gastoPorPersona = porPersona,
+        ingresoPorCategoria = porCategoria(Tipo.INGRESO),
+        tendencia = (5 downTo 0).map { i ->
+            val m = mes.minusMonths(i.toLong())
+            val delM = movimientos.filter { YearMonth.from(it.fecha) == m }
+            PuntoMes(m, delM.total(Tipo.INGRESO), delM.total(Tipo.GASTO))
+        },
     )
 }

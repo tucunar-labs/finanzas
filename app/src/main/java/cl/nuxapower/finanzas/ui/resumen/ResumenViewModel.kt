@@ -2,7 +2,10 @@ package cl.nuxapower.finanzas.ui.resumen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cl.nuxapower.finanzas.data.model.Tipo
+import cl.nuxapower.finanzas.data.repo.FiltroSolicitado
 import cl.nuxapower.finanzas.data.repo.HogarDatos
+import cl.nuxapower.finanzas.data.repo.Solicitudes
 import cl.nuxapower.finanzas.domain.Resumen
 import cl.nuxapower.finanzas.domain.calcularResumen
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +18,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 @HiltViewModel
-class ResumenViewModel @Inject constructor(datos: HogarDatos) : ViewModel() {
+class ResumenViewModel @Inject constructor(
+    datos: HogarDatos,
+    private val solicitudes: Solicitudes,
+) : ViewModel() {
 
     private val mes = MutableStateFlow(YearMonth.now())
 
@@ -29,5 +35,10 @@ class ResumenViewModel @Inject constructor(datos: HogarDatos) : ViewModel() {
 
     fun mes(m: YearMonth) {
         mes.value = m
+    }
+
+    /** Pide a Movimientos mostrar lo que compone una barra del resumen. */
+    fun verMovimientos(tipo: Tipo, categoriaId: String? = null, personaId: String? = null) {
+        solicitudes.filtroMovimientos.value = FiltroSolicitado(mes.value, categoriaId, personaId, tipo)
     }
 }

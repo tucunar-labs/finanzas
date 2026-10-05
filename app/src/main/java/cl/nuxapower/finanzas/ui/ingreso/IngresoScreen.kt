@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -36,6 +37,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -90,6 +92,10 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
                     onCerrar()
                 }
                 EventoIngreso.NoEncontrado -> onCerrar()
+                is EventoIngreso.Duplicado -> {
+                    avisos.deshacer("Duplicado con fecha de hoy") { vm.deshacerCreacion(ev.id) }
+                    onCerrar()
+                }
             }
         }
     }
@@ -102,6 +108,7 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
                     IconButton(onClick = onCerrar) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") }
                 },
                 actions = {
+                    IconButton(onClick = vm::duplicar) { Icon(Icons.Filled.ContentCopy, "Duplicar con fecha de hoy") }
                     IconButton(onClick = vm::eliminar) { Icon(Icons.Filled.Delete, "Eliminar") }
                 },
                 windowInsets = WindowInsets(0),
@@ -120,6 +127,18 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
                 }
             }
 
+            if (f.sumandos.isNotEmpty()) {
+                Text(
+                    (f.sumandos.map { formatoClp(it) } + listOfNotNull(f.digitos.toLongOrNull()?.let { formatoClp(it) }))
+                        .joinToString(" + "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.outline,
+                    textAlign = TextAlign.End,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
             Text(
                 formatoClp(f.monto),
                 style = MaterialTheme.typography.displayMedium,
@@ -169,12 +188,23 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            if (e.sugerencias.isNotEmpty() && f.nota.isBlank()) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    e.sugerencias.forEach { s ->
+                        SuggestionChip(onClick = { vm.nota(s) }, label = { Text(s, maxLines = 1) })
+                    }
+                }
+            }
+
             f.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
             }
         }
 
-        Teclado(onTecla = vm::tecla, onBorrar = vm::borrar, onLimpiar = vm::limpiarMonto)
+        Teclado(onTecla = vm::tecla, onSumar = vm::sumar, onBorrar = vm::borrar, onLimpiar = vm::limpiarMonto)
 
         Button(
             onClick = vm::guardar,
@@ -208,34 +238,43 @@ private fun CategoriaCelda(c: Categoria, seleccionada: Boolean, onClick: () -> U
     }
 }
 
+/** Teclado de 4 columnas: dígitos, "000" para miles, "+" para sumar montos y borrar (mantener = limpiar). */
 @Composable
-private fun Teclado(onTecla: (String) -> Unit, onBorrar: () -> Unit, onLimpiar: () -> Unit) {
-    val filas = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf("000", "0", "⌫"))
+private fun Teclado(onTecla: (String) -> Unit, onSumar: () -> Unit, onBorrar: () -> Unit, onLimpiar: () -> Unit) {
+    @Composable
+    fun RowScope.Digito(t: String, peso: Float = 1f) = Tecla(onClick = { onTecla(t) }, peso = peso) {
+        Text(t, style = MaterialTheme.typography.headlineSmall)
+    }
     Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
-        filas.forEach { fila ->
-            Row(Modifier.fillMaxWidth()) {
-                fila.forEach { t ->
-                    if (t == "⌫") {
-                        Tecla(onClick = onBorrar, onLongClick = onLimpiar) {
-                            Icon(Icons.AutoMirrored.Filled.Backspace, "Borrar")
-                        }
-                    } else {
-                        Tecla(onClick = { onTecla(t) }) {
-                            Text(t, style = MaterialTheme.typography.headlineSmall)
-                        }
-                    }
-                }
-            }
+        Row(Modifier.fillMaxWidth()) {
+            Digito("1"); Digito("2"); Digito("3")
+            Tecla(onClick = onBorrar, onLongClick = onLimpiar) { Icon(Icons.AutoMirrored.Filled.Backspace, "Borrar") }
+        }
+        Row(Modifier.fillMaxWidth()) {
+            Digito("4"); Digito("5"); Digito("6")
+            Tecla(onClick = onSumar) { Text("+", style = MaterialTheme.typography.headlineSmall) }
+        }
+        Row(Modifier.fillMaxWidth()) {
+            Digito("7"); Digito("8"); Digito("9")
+            Tecla(onClick = onLimpiar) { Text("C", style = MaterialTheme.typography.titleLarge) }
+        }
+        Row(Modifier.fillMaxWidth()) {
+            Digito("000", peso = 2f); Digito("0", peso = 2f)
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun RowScope.Tecla(onClick: () -> Unit, onLongClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+private fun RowScope.Tecla(
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    peso: Float = 1f,
+    content: @Composable () -> Unit,
+) {
     Box(
         Modifier
-            .weight(1f)
+            .weight(peso)
             .height(54.dp)
             .padding(2.dp)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),

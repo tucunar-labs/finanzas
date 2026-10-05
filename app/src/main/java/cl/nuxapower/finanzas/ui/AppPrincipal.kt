@@ -22,6 +22,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -43,6 +44,13 @@ private enum class Pestana(val ruta: String, val titulo: String, val icono: Imag
     AJUSTES("ajustes", "Ajustes", Icons.Filled.Settings),
 }
 
+/** Cambia de pestaña conservando el estado de cada una. */
+private fun irA(nav: NavHostController, ruta: String) = nav.navigate(ruta) {
+    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+    launchSingleTop = true
+    restoreState = true
+}
+
 @Composable
 fun AppPrincipal() {
     val nav = rememberNavController()
@@ -62,13 +70,7 @@ fun AppPrincipal() {
                         Pestana.entries.forEach { p ->
                             NavigationBarItem(
                                 selected = rutaActual == p.ruta,
-                                onClick = {
-                                    nav.navigate(p.ruta) {
-                                        popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
+                                onClick = { irA(nav, p.ruta) },
                                 icon = { Icon(p.icono, null) },
                                 label = { Text(p.titulo) },
                             )
@@ -86,7 +88,9 @@ fun AppPrincipal() {
                 composable(Pestana.MOVIMIENTOS.ruta) {
                     MovimientosScreen(onEditar = { id -> nav.navigate("editar/$id") })
                 }
-                composable(Pestana.RESUMEN.ruta) { ResumenScreen() }
+                composable(Pestana.RESUMEN.ruta) {
+                    ResumenScreen(onVerMovimientos = { irA(nav, Pestana.MOVIMIENTOS.ruta) })
+                }
                 composable(Pestana.AJUSTES.ruta) { AjustesScreen(onCategorias = { nav.navigate("categorias") }) }
                 composable("categorias") { CategoriasScreen(onVolver = { nav.popBackStack() }) }
                 composable(

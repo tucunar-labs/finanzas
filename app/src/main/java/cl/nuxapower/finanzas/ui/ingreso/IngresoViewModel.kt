@@ -9,6 +9,7 @@ import cl.nuxapower.finanzas.data.model.Persona
 import cl.nuxapower.finanzas.data.model.Tipo
 import cl.nuxapower.finanzas.data.repo.HogarDatos
 import cl.nuxapower.finanzas.data.repo.MovimientoRepository
+import cl.nuxapower.finanzas.data.repo.Solicitudes
 import cl.nuxapower.finanzas.util.formatoClp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
@@ -31,6 +32,8 @@ private const val MAX_DIGITOS = 12
 data class FormMovimiento(
     val tipo: Tipo = Tipo.GASTO,
     val digitos: String = "",
+    /** Montos ya sumados con "+" (para sumar varias boletas en un solo movimiento). */
+    val sumandos: List<Long> = emptyList(),
     val categoriaId: String? = null,
     val personaId: String? = null,
     val fecha: LocalDate = LocalDate.now(),
@@ -39,7 +42,7 @@ data class FormMovimiento(
     /** Movimiento original cuando se está editando. */
     val original: Movimiento? = null,
 ) {
-    val monto: Long get() = digitos.toLongOrNull() ?: 0L
+    val monto: Long get() = sumandos.sum() + (digitos.toLongOrNull() ?: 0L)
 }
 
 data class IngresoEstado(
@@ -48,6 +51,8 @@ data class IngresoEstado(
     val categorias: List<Categoria> = emptyList(),
     val personas: List<Persona> = emptyList(),
     val editando: Boolean = false,
+    /** Notas usadas antes en la categoría elegida (o en general), para no reescribirlas. */
+    val sugerencias: List<String> = emptyList(),
 )
 
 sealed interface EventoIngreso {
@@ -55,6 +60,7 @@ sealed interface EventoIngreso {
     data object Editado : EventoIngreso
     data class Eliminado(val movimiento: Movimiento) : EventoIngreso
     data object NoEncontrado : EventoIngreso
+    data class Duplicado(val id: String) : EventoIngreso
 }
 
 /** Sirve para el ingreso rápido y para editar un movimiento existente (argumento de navegación "id"). */
@@ -63,6 +69,7 @@ class IngresoViewModel @Inject constructor(
     savedState: SavedStateHandle,
     private val datos: HogarDatos,
     private val repo: MovimientoRepository,
+    private val solicitudes: Solicitudes,
 ) : ViewModel() {
 
     private val editandoId: String? = savedState["id"]
@@ -71,16 +78,27 @@ class IngresoViewModel @Inject constructor(
     private val _eventos = Channel<EventoIngreso>(Channel.BUFFERED)
     val eventos: Flow<EventoIngreso> = _eventos.receiveAsFlow()
 
-    val estado: StateFlow<IngresoEstado> = combine(form, datos.categorias, datos.personas) { f, cats, pers ->
-        IngresoEstado(
-            form = f,
-            categorias = cats.filter { it.tipo == f.tipo && (!it.archivada || it.id == f.categoriaId) },
-            personas = pers,
-            editando = editandoId != null,
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), IngresoEstado(editando = editandoId != null))
+    val estado: StateFlow<IngresoEstado> =
+        combine(form, datos.categorias, datos.personas, datos.movimientos) { f, cats, pers, movs ->
+            IngresoEstado(
+                form = f,
+                categorias = cats.filter { it.tipo == f.tipo && (!it.archivada || it.id == f.categoriaId) },
+                personas = pers,
+                editando = editandoId != null,
+                sugerencias = sugerenciasNota(movs.orEmpty(), f),
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), IngresoEstado(editando = editandoId != null))
 
     init {
+        // Atajo del launcher "Nuevo ingreso/gasto".
+        if (editandoId == null) viewModelScope.launch {
+            solicitudes.tipoIngreso.collect { t ->
+                if (t != null) {
+                    tipo(t)
+                    solicitudes.tipoIngreso.value = null
+                }
+            }
+        }
         if (editandoId != null) viewModelScope.launch {
             val m = datos.movimientos.filterNotNull().first().find { it.id == editandoId }
             if (m == null) {
@@ -104,8 +122,22 @@ class IngresoViewModel @Inject constructor(
         if (nuevo.length > MAX_DIGITOS) it else it.copy(digitos = nuevo, error = null)
     }
 
-    fun borrar() = form.update { it.copy(digitos = it.digitos.dropLast(1)) }
-    fun limpiarMonto() = form.update { it.copy(digitos = "") }
+    /** "+": guarda el número actual como sumando y empieza otro. */
+    fun sumar() = form.update {
+        val actual = it.digitos.toLongOrNull() ?: 0L
+        if (actual == 0L) it else it.copy(sumandos = it.sumandos + actual, digitos = "")
+    }
+
+    /** Borra un dígito; si no quedan, recupera el último sumando para seguir editándolo. */
+    fun borrar() = form.update {
+        when {
+            it.digitos.isNotEmpty() -> it.copy(digitos = it.digitos.dropLast(1))
+            it.sumandos.isNotEmpty() -> it.copy(digitos = it.sumandos.last().toString(), sumandos = it.sumandos.dropLast(1))
+            else -> it
+        }
+    }
+
+    fun limpiarMonto() = form.update { it.copy(digitos = "", sumandos = emptyList()) }
 
     fun tipo(t: Tipo) = form.update {
         if (it.tipo == t) it else it.copy(tipo = t, categoriaId = null, error = null)
@@ -153,6 +185,14 @@ class IngresoViewModel @Inject constructor(
         }
     }
 
+    /** Crea una copia con fecha de hoy (gastos que se repiten: arriendo, cuentas, etc.). */
+    fun duplicar() {
+        val m = form.value.original ?: return
+        val hid = datos.hogarId ?: return
+        val id = repo.crear(hid, m.copy(fecha = LocalDate.now(), creadoPor = datos.uid.orEmpty()))
+        _eventos.trySend(EventoIngreso.Duplicado(id))
+    }
+
     fun eliminar() {
         val m = form.value.original ?: return
         val hid = datos.hogarId ?: return
@@ -169,3 +209,14 @@ class IngresoViewModel @Inject constructor(
         datos.hogarId?.let { repo.restaurar(it, m) }
     }
 }
+
+/** Hasta 4 notas recientes distintas, de la categoría elegida si hay una. */
+private fun sugerenciasNota(movs: List<Movimiento>, f: FormMovimiento): List<String> =
+    movs.asSequence()
+        .filter { it.tipo == f.tipo && it.nota.isNotBlank() }
+        .filter { f.categoriaId == null || it.categoriaId == f.categoriaId }
+        .map { it.nota.trim() }
+        .filter { it != f.nota.trim() }
+        .distinctBy { it.lowercase() }
+        .take(4)
+        .toList()

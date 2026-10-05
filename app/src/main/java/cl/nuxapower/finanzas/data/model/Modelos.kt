@@ -33,6 +33,8 @@ data class Movimiento(
     val nota: String = "",
     val creadoPor: String = "",
     val creadoEn: Instant? = null,
+    /** Cambio local aún no confirmado por el servidor (sin conexión). */
+    val pendiente: Boolean = false,
 )
 
 data class Hogar(

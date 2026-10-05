@@ -11,12 +11,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -24,6 +28,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -34,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,9 +66,42 @@ fun MovimientosScreen(onEditar: (String) -> Unit, vm: MovimientosViewModel = hil
     val e by vm.estado.collectAsStateWithLifecycle()
     val avisos = LocalAvisos.current
 
+    var buscando by rememberSaveable { mutableStateOf(false) }
+
     Column(Modifier.fillMaxSize()) {
-        SelectorMes(e.filtros.mes, vm::mes, Modifier.padding(horizontal = 4.dp))
+        if (buscando) {
+            OutlinedTextField(
+                value = e.filtros.busqueda,
+                onValueChange = vm::buscar,
+                placeholder = { Text("Buscar en todos los meses") },
+                leadingIcon = { Icon(Icons.Filled.Search, null) },
+                trailingIcon = {
+                    IconButton(onClick = { vm.buscar(""); buscando = false }) { Icon(Icons.Filled.Close, "Cerrar búsqueda") }
+                },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SelectorMes(e.filtros.mes, vm::mes, Modifier.weight(1f).padding(start = 4.dp))
+                IconButton(onClick = { buscando = true }) { Icon(Icons.Filled.Search, "Buscar") }
+            }
+        }
         BarraFiltros(e, vm)
+        if (e.pendientes > 0) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.CloudOff, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "${e.pendientes} sin sincronizar: se subirán solos al volver la conexión",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            }
+        }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
             Text("Ingresos ", style = MaterialTheme.typography.bodyMedium)
             MontoTipo(e.totalIngresos, Tipo.INGRESO, MaterialTheme.typography.bodyMedium)
@@ -73,7 +114,13 @@ fun MovimientosScreen(onEditar: (String) -> Unit, vm: MovimientosViewModel = hil
         when {
             e.cargando -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
             e.dias.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Text("Sin movimientos", color = MaterialTheme.colorScheme.outline)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Sin movimientos", color = MaterialTheme.colorScheme.outline)
+                    val f = e.filtros
+                    if (f.tipo != null || f.categoriaId != null || f.personaId != null) {
+                        TextButton(onClick = vm::limpiarFiltros) { Text("Quitar filtros") }
+                    }
+                }
             }
             else -> LazyColumn(Modifier.fillMaxSize()) {
                 e.dias.forEach { dia ->
@@ -83,7 +130,11 @@ fun MovimientosScreen(onEditar: (String) -> Unit, vm: MovimientosViewModel = hil
                                 .background(MaterialTheme.colorScheme.surfaceContainerLow)
                                 .padding(horizontal = 16.dp, vertical = 6.dp),
                         ) {
-                            Text(formatoDia(dia.fecha), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                            Text(
+                                formatoDia(dia.fecha) + if (e.filtros.busqueda.isNotBlank()) " ${dia.fecha.year}" else "",
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.weight(1f),
+                            )
                             Text(
                                 formatoClp(dia.neto),
                                 style = MaterialTheme.typography.labelLarge,
@@ -210,6 +261,15 @@ private fun FilaDeslizable(
                         )
                     }
                 }
+            }
+            if (m.pendiente) {
+                Icon(
+                    Icons.Filled.CloudOff,
+                    "Sin sincronizar",
+                    Modifier.size(14.dp).padding(end = 2.dp),
+                    tint = MaterialTheme.colorScheme.outline,
+                )
+                Spacer(Modifier.width(4.dp))
             }
             MontoTipo(m.monto, m.tipo)
         }

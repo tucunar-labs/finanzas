@@ -55,6 +55,11 @@ class HogarDatos @Inject constructor(
         }
     }
 
+    /** Movimientos guardados localmente que aún no llegan al servidor. */
+    val pendientes: StateFlow<Int> = movimientos
+        .map { l -> l.orEmpty().count { it.pendiente } }
+        .stateIn(scope, SharingStarted.Eagerly, 0)
+
     private fun <T> porHogar(inicial: T, fuente: (String) -> Flow<T>): StateFlow<T> =
         hid.flatMapLatest { id ->
             if (id == null) flowOf(inicial)

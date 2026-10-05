@@ -18,9 +18,10 @@ fun DocumentReference.flujo(metadata: Boolean = false): Flow<DocumentSnapshot> =
     awaitClose { reg.remove() }
 }
 
-/** Listener en tiempo real de una consulta como Flow. */
-fun Query.flujo(): Flow<QuerySnapshot> = callbackFlow {
-    val reg = addSnapshotListener { snap, err ->
+/** Listener en tiempo real de una consulta como Flow. Con [metadata] avisa también cuando se sincroniza. */
+fun Query.flujo(metadata: Boolean = false): Flow<QuerySnapshot> = callbackFlow {
+    val cambios = if (metadata) MetadataChanges.INCLUDE else MetadataChanges.EXCLUDE
+    val reg = addSnapshotListener(cambios) { snap, err ->
         if (err != null) close(err) else if (snap != null) trySend(snap)
     }
     awaitClose { reg.remove() }

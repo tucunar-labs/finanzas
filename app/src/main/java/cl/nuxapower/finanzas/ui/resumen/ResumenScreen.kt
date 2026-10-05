@@ -1,6 +1,7 @@
 package cl.nuxapower.finanzas.ui.resumen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,9 +18,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,19 +35,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import cl.nuxapower.finanzas.data.model.Tipo
 import cl.nuxapower.finanzas.domain.Parte
+import cl.nuxapower.finanzas.domain.PuntoMes
 import cl.nuxapower.finanzas.domain.Resumen
 import cl.nuxapower.finanzas.domain.variacion
 import cl.nuxapower.finanzas.ui.comun.Punto
 import cl.nuxapower.finanzas.ui.comun.SelectorMes
 import cl.nuxapower.finanzas.ui.theme.ColoresMonto
 import cl.nuxapower.finanzas.util.formatoClp
+import cl.nuxapower.finanzas.util.localeCl
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 @Composable
-fun ResumenScreen(vm: ResumenViewModel = hiltViewModel()) {
+fun ResumenScreen(onVerMovimientos: () -> Unit, vm: ResumenViewModel = hiltViewModel()) {
     val r by vm.resumen.collectAsStateWithLifecycle()
     val mes by vm.mesActual.collectAsStateWithLifecycle()
+    var tipoCategorias by rememberSaveable { mutableStateOf(Tipo.GASTO) }
+    fun ver(tipo: Tipo, categoriaId: String? = null, personaId: String? = null) {
+        vm.verMovimientos(tipo, categoriaId, personaId)
+        onVerMovimientos()
+    }
 
     Column(Modifier.fillMaxSize()) {
         SelectorMes(mes, vm::mes, Modifier.padding(horizontal = 4.dp))
@@ -53,14 +69,29 @@ fun ResumenScreen(vm: ResumenViewModel = hiltViewModel()) {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Totales(res)
-                Seccion("Gasto por categoría") {
-                    if (res.gastoPorCategoria.isEmpty()) SinDatos()
-                    res.gastoPorCategoria.forEach { Barra(it, mostrarAnterior = true) }
+                Seccion("Por categoría") {
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        Tipo.entries.forEachIndexed { i, t ->
+                            SegmentedButton(
+                                selected = tipoCategorias == t,
+                                onClick = { tipoCategorias = t },
+                                shape = SegmentedButtonDefaults.itemShape(i, Tipo.entries.size),
+                            ) { Text(if (t == Tipo.GASTO) "Gastos" else "Ingresos") }
+                        }
+                    }
+                    val partes = if (tipoCategorias == Tipo.GASTO) res.gastoPorCategoria else res.ingresoPorCategoria
+                    if (partes.isEmpty()) SinDatos(tipoCategorias)
+                    partes.forEach { p ->
+                        Barra(p, mostrarAnterior = true) { ver(tipoCategorias, categoriaId = p.id) }
+                    }
                 }
                 Seccion("Gasto por persona") {
-                    if (res.gastoPorPersona.isEmpty()) SinDatos()
-                    res.gastoPorPersona.forEach { Barra(it, mostrarAnterior = false) }
+                    if (res.gastoPorPersona.isEmpty()) SinDatos(Tipo.GASTO)
+                    res.gastoPorPersona.forEach { p ->
+                        Barra(p, mostrarAnterior = false) { ver(Tipo.GASTO, personaId = p.id) }
+                    }
                 }
+                Seccion("Últimos 6 meses") { Tendencia(res.tendencia) }
             }
         }
     }
@@ -142,12 +173,63 @@ private fun Seccion(titulo: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SinDatos() = Text("Sin gastos este mes", color = MaterialTheme.colorScheme.outline)
+private fun SinDatos(tipo: Tipo) =
+    Text(if (tipo == Tipo.GASTO) "Sin gastos este mes" else "Sin ingresos este mes", color = MaterialTheme.colorScheme.outline)
+
+/** Barras verticales ingresos (verde) vs gastos (rojo) por mes, escaladas al máximo del período. */
+@Composable
+private fun Tendencia(puntos: List<PuntoMes>) {
+    val max = puntos.maxOfOrNull { maxOf(it.ingresos, it.gastos) }?.takeIf { it > 0 } ?: 1L
+    val alto = 120.dp
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Bottom) {
+        puntos.forEach { p ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(Modifier.height(alto), verticalAlignment = Alignment.Bottom) {
+                    BarraVertical(p.ingresos.toFloat() / max, alto, ColoresMonto.ingreso())
+                    Spacer(Modifier.width(3.dp))
+                    BarraVertical(p.gastos.toFloat() / max, alto, ColoresMonto.gasto())
+                }
+                Text(
+                    p.mes.format(DateTimeFormatter.ofPattern("MMM", localeCl)).take(3),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                Text(
+                    formatoCorto(p.ingresos - p.gastos),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (p.ingresos >= p.gastos) ColoresMonto.ingreso() else ColoresMonto.gasto(),
+                )
+            }
+        }
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.Center) {
+        Punto(0xFF1E8E3E, 8.dp); Text(" Ingresos   ", style = MaterialTheme.typography.labelSmall)
+        Punto(0xFFC5221F, 8.dp); Text(" Gastos   · balance bajo cada mes", style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun BarraVertical(fraccion: Float, alto: androidx.compose.ui.unit.Dp, color: Color) {
+    Box(
+        Modifier.width(12.dp).height(alto * fraccion.coerceIn(0f, 1f))
+            .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)).background(color)
+    )
+}
+
+/** Monto compacto para ejes: "$1,2M", "$350k", "-$40k". */
+private fun formatoCorto(m: Long): String {
+    val signo = if (m < 0) "-" else ""
+    val a = kotlin.math.abs(m)
+    return signo + when {
+        a >= 1_000_000 -> "$" + String.format(localeCl, "%.1fM", a / 1_000_000.0).replace(".0M", "M")
+        a >= 1_000 -> "$" + (a / 1_000) + "k"
+        else -> "$" + a
+    }
+}
 
 /** Barra horizontal con porcentaje del total de gastos del mes. */
 @Composable
-private fun Barra(p: Parte, mostrarAnterior: Boolean) {
-    Column {
+private fun Barra(p: Parte, mostrarAnterior: Boolean, onClick: () -> Unit) {
+    Column(Modifier.clickable(onClick = onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (p.icono.isNotEmpty()) Text(p.icono) else Punto(p.color)
             Spacer(Modifier.width(8.dp))

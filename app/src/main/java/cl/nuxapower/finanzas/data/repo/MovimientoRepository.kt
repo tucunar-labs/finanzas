@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.map
 class MovimientoRepository @Inject constructor(private val db: FirebaseFirestore) {
 
     fun movimientos(hid: String): Flow<List<Movimiento>> =
-        db.movimientos(hid).flujo().map { snap -> snap.documents.mapNotNull { it.toMovimiento() } }
+        db.movimientos(hid).flujo(metadata = true).map { snap -> snap.documents.mapNotNull { it.toMovimiento() } }
 
     /** Devuelve el id generado localmente (sirve para deshacer). */
     fun crear(hid: String, m: Movimiento): String {
