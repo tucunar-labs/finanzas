@@ -14,6 +14,7 @@ credentials = "1.6.0"
 googleId = "1.2.1"
 coroutines = "1.11.0"
 coreKtx = "1.17.0"
+glance = "1.2.0"
 junit = "4.13.2"
 
 [libraries]
@@ -39,6 +40,8 @@ credentials-play-services = { group = "androidx.credentials", name = "credential
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }
 coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 
+glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]

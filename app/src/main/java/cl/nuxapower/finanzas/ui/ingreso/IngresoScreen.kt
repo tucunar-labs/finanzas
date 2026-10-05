@@ -238,28 +238,21 @@ private fun CategoriaCelda(c: Categoria, seleccionada: Boolean, onClick: () -> U
     }
 }
 
-/** Teclado de 4 columnas: dígitos, "000" para miles, "+" para sumar montos y borrar (mantener = limpiar). */
+/** Teclado numérico: "+" suma varios montos, ⌫ borra (mantener presionado = limpiar). */
 @Composable
-private fun Teclado(onTecla: (String) -> Unit, onSumar: () -> Unit, onBorrar: () -> Unit, onLimpiar: () -> Unit) {
+internal fun Teclado(onTecla: (String) -> Unit, onSumar: () -> Unit, onBorrar: () -> Unit, onLimpiar: () -> Unit) {
     @Composable
-    fun RowScope.Digito(t: String, peso: Float = 1f) = Tecla(onClick = { onTecla(t) }, peso = peso) {
+    fun RowScope.Digito(t: String) = Tecla(onClick = { onTecla(t) }) {
         Text(t, style = MaterialTheme.typography.headlineSmall)
     }
     Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
-        Row(Modifier.fillMaxWidth()) {
-            Digito("1"); Digito("2"); Digito("3")
-            Tecla(onClick = onBorrar, onLongClick = onLimpiar) { Icon(Icons.AutoMirrored.Filled.Backspace, "Borrar") }
+        listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9")).forEach { fila ->
+            Row(Modifier.fillMaxWidth()) { fila.forEach { Digito(it) } }
         }
         Row(Modifier.fillMaxWidth()) {
-            Digito("4"); Digito("5"); Digito("6")
             Tecla(onClick = onSumar) { Text("+", style = MaterialTheme.typography.headlineSmall) }
-        }
-        Row(Modifier.fillMaxWidth()) {
-            Digito("7"); Digito("8"); Digito("9")
-            Tecla(onClick = onLimpiar) { Text("C", style = MaterialTheme.typography.titleLarge) }
-        }
-        Row(Modifier.fillMaxWidth()) {
-            Digito("000", peso = 2f); Digito("0", peso = 2f)
+            Digito("0")
+            Tecla(onClick = onBorrar, onLongClick = onLimpiar) { Icon(Icons.AutoMirrored.Filled.Backspace, "Borrar") }
         }
     }
 }
@@ -269,12 +262,11 @@ private fun Teclado(onTecla: (String) -> Unit, onSumar: () -> Unit, onBorrar: ()
 private fun RowScope.Tecla(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
-    peso: Float = 1f,
     content: @Composable () -> Unit,
 ) {
     Box(
         Modifier
-            .weight(peso)
+            .weight(1f)
             .height(54.dp)
             .padding(2.dp)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),

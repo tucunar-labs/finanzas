@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -35,11 +36,13 @@ import cl.nuxapower.finanzas.ui.comun.Avisos
 import cl.nuxapower.finanzas.ui.comun.LocalAvisos
 import cl.nuxapower.finanzas.ui.ingreso.IngresoScreen
 import cl.nuxapower.finanzas.ui.movimientos.MovimientosScreen
+import cl.nuxapower.finanzas.ui.presupuesto.PresupuestoScreen
 import cl.nuxapower.finanzas.ui.resumen.ResumenScreen
 
 private enum class Pestana(val ruta: String, val titulo: String, val icono: ImageVector) {
     INGRESO("ingreso", "Ingresar", Icons.Filled.AddCircle),
     MOVIMIENTOS("movimientos", "Movimientos", Icons.AutoMirrored.Filled.ReceiptLong),
+    PRESUPUESTO("presupuesto", "Presupuesto", Icons.Filled.Savings),
     RESUMEN("resumen", "Resumen", Icons.Filled.PieChart),
     AJUSTES("ajustes", "Ajustes", Icons.Filled.Settings),
 }
@@ -72,7 +75,7 @@ fun AppPrincipal() {
                                 selected = rutaActual == p.ruta,
                                 onClick = { irA(nav, p.ruta) },
                                 icon = { Icon(p.icono, null) },
-                                label = { Text(p.titulo) },
+                                label = { Text(p.titulo, maxLines = 1, softWrap = false) },
                             )
                         }
                     }
@@ -87,6 +90,9 @@ fun AppPrincipal() {
                 composable(Pestana.INGRESO.ruta) { IngresoScreen() }
                 composable(Pestana.MOVIMIENTOS.ruta) {
                     MovimientosScreen(onEditar = { id -> nav.navigate("editar/$id") })
+                }
+                composable(Pestana.PRESUPUESTO.ruta) {
+                    PresupuestoScreen(onVerMovimientos = { irA(nav, Pestana.MOVIMIENTOS.ruta) })
                 }
                 composable(Pestana.RESUMEN.ruta) {
                     ResumenScreen(onVerMovimientos = { irA(nav, Pestana.MOVIMIENTOS.ruta) })

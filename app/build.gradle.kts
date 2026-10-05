@@ -22,8 +22,8 @@ android {
         applicationId = "cl.nuxapower.finanzas"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.0.1"
+        versionCode = 5
+        versionName = "1.2.0"
     }
 
     signingConfigs {
@@ -82,6 +82,8 @@ dependencies {
     implementation(libs.credentials)
     implementation(libs.credentials.play.services)
     implementation(libs.googleid)
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
 
     testImplementation(libs.junit)
 }

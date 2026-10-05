@@ -2,4 +2,5 @@
     <string name="app_name">Finanzas</string>
     <string name="atajo_gasto">Nuevo gasto</string>
     <string name="atajo_ingreso">Nuevo ingreso</string>
+    <string name="widget_descripcion">Registra un gasto en dos toques</string>
 </resources>

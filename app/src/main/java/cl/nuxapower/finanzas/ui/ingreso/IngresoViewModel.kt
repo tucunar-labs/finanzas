@@ -73,7 +73,8 @@ class IngresoViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val editandoId: String? = savedState["id"]
-    private val form = MutableStateFlow(FormMovimiento(personaId = datos.uid))
+    // Categoría preelegida desde el widget de inicio.
+    private val form = MutableStateFlow(FormMovimiento(personaId = datos.uid, categoriaId = savedState["categoriaId"]))
 
     private val _eventos = Channel<EventoIngreso>(Channel.BUFFERED)
     val eventos: Flow<EventoIngreso> = _eventos.receiveAsFlow()
@@ -149,7 +150,8 @@ class IngresoViewModel @Inject constructor(
     fun nota(s: String) = form.update { it.copy(nota = s.take(500)) }
 
     fun guardar() {
-        val f = form.value
+        // Si el ViewModel nació antes de cargar la sesión (widget en frío), la persona por defecto es quien usa el teléfono.
+        val f = form.value.let { if (it.personaId == null) it.copy(personaId = datos.uid) else it }
         val hid = datos.hogarId ?: return
         val error = when {
             f.monto <= 0 -> "Ingresa un monto mayor a 0"

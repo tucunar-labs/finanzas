@@ -75,6 +75,16 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // Presupuesto mensual: un documento por mes (yyyy-MM) con { montos: { categoriaId: monto } }.
+      match /presupuestos/{mes} {
+        allow read: if esMiembro(hid);
+        allow write: if seraMiembro(hid)
+          && mes.matches('^[0-9]{4}-[0-9]{2}$')
+          && request.resource.data.keys().hasOnly(['montos'])
+          && request.resource.data.montos is map
+          && request.resource.data.montos.size() <= 100;
+      }
+
       match /movimientos/{mid} {
         function movimientoValido(d) {
           return d.keys().hasAll(['tipo', 'monto', 'categoriaId', 'personaId', 'fecha', 'creadoPor', 'creadoEn'])

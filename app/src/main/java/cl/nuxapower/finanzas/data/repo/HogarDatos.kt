@@ -31,6 +31,7 @@ class HogarDatos @Inject constructor(
     private val sesionRepo: SesionRepository,
     hogares: HogarRepository,
     movimientosRepo: MovimientoRepository,
+    presupuestosRepo: PresupuestoRepository,
     @AppScope private val scope: CoroutineScope,
 ) {
     private val hid: Flow<String?> = sesionRepo.sesion
@@ -54,6 +55,10 @@ class HogarDatos @Inject constructor(
             )
         }
     }
+
+    /** Presupuestos definidos, por mes. */
+    val presupuestos: StateFlow<Map<java.time.YearMonth, Map<String, Long>>> =
+        porHogar(emptyMap()) { presupuestosRepo.presupuestos(it) }
 
     /** Movimientos guardados localmente que aún no llegan al servidor. */
     val pendientes: StateFlow<Int> = movimientos

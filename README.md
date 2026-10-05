@@ -7,8 +7,13 @@ Kotlin + Jetpack Compose (Material 3), MVVM, Hilt, Firebase Auth (Google) + Clou
 
 - **Ingreso rápido** (pantalla inicial): monto con teclado propio, Gasto/Ingreso, categoría, persona
   (por defecto quien usa el teléfono), fecha (hoy por defecto) y nota. Monto + categoría + Guardar = 3 toques.
-  Snackbar con *Deshacer*. Extras: tecla `000`, tecla `+` para sumar varias boletas, mantener ⌫ o `C` para
-  limpiar, notas sugeridas según la categoría.
+  Snackbar con *Deshacer*. Extras: tecla `+` para sumar varias boletas, mantener ⌫ para limpiar,
+  notas sugeridas según la categoría.
+- **Widget de inicio "Gasto rápido"**: grilla con las categorías de gasto; tocar una abre una hoja con el
+  teclado y esa categoría elegida. Persona = quien usa el teléfono, fecha = hoy. Funciona sin conexión.
+- **Presupuesto**: monto mensual por categoría de gasto, con barra de avance (verde < 80 %, ámbar hasta
+  100 %, rojo y ⚠ al pasarse) y total del mes. Un mes sin presupuesto propio hereda el del último mes
+  definido; editar guarda solo para el mes mostrado. Tocar una categoría abre sus movimientos.
 - **Movimientos**: agrupados por día con neto diario, totales del mes, filtros por mes, tipo, categoría y
   persona, búsqueda en todos los meses (nota, categoría, persona, monto). Tocar = editar (y duplicar con
   fecha de hoy), deslizar a la izquierda = eliminar con *Deshacer*. Ícono de nube tachada en lo que aún no
@@ -37,8 +42,9 @@ app/src/main/java/cl/nuxapower/finanzas/
 │   ├── HogarDatos                       # listeners en tiempo real compartidos (hogar, personas, categorías, movimientos)
 │   ├── MovimientoRepository, CategoriaRepository
 │   └── Solicitudes                      # pedidos entre pantallas (atajos, filtro desde Resumen)
-├── domain/                              # Resumen y CSV (lógica pura, con tests)
-├── ui/                                  # login, hogar, ingreso, movimientos, resumen, categorias, ajustes, comun, theme
+├── domain/                              # Resumen, Presupuesto y CSV (lógica pura, con tests)
+├── ui/                                  # login, hogar, ingreso, movimientos, presupuesto, resumen, categorias, ajustes, comun, theme
+├── widget/                              # widget Glance, hoja de gasto rápido, caché de categorías para el widget
 └── util/                                # formato CLP, fechas, código de invitación, Flow de Firestore
 firestore.rules                          # reglas de seguridad
 scripts/publicar-reglas.sh               # publica las reglas sin firebase CLI
@@ -56,6 +62,7 @@ households/{hid}                     { codigoInvitacion, miembros[≤2], creadoP
 households/{hid}/personas/{uid}      { nombre, color }
 households/{hid}/categorias/{id}     { nombre, icono, color, tipo, archivada, orden }
 households/{hid}/movimientos/{id}    { tipo, monto, categoriaId, personaId, fecha "yyyy-MM-dd", nota, creadoPor, creadoEn }
+households/{hid}/presupuestos/{mes}  { montos: { categoriaId: monto } }       # mes = "yyyy-MM"
 ```
 
 ## Puesta en marcha (desde cero)
@@ -114,5 +121,7 @@ la otra lo ingresa en **Unirme**.
   cargar varios seguidos.
 - CSV con `;` como separador y BOM UTF-8 (Excel en español lo abre en columnas con acentos correctos);
   montos enteros sin separador de miles.
-- Fuera de alcance (no implementado): presupuestos, metas, múltiples monedas, fotos, importación bancaria,
-  notificaciones, división de deudas.
+- El widget lee una copia local de las categorías que la app actualiza al abrirse; si se crean o
+  reordenan categorías, el widget se entera la próxima vez que la app corra.
+- Fuera de alcance (no implementado): metas, múltiples monedas, fotos, importación bancaria,
+  notificaciones, división de deudas. (Presupuestos se agregó después a pedido.)
