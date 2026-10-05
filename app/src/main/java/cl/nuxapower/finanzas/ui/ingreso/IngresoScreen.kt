@@ -150,7 +150,7 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
             )
 
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 92.dp),
+                columns = GridCells.Fixed(4),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f),
@@ -224,13 +224,13 @@ private fun CategoriaCelda(c: Categoria, seleccionada: Boolean, onClick: () -> U
         border = if (seleccionada) BorderStroke(2.dp, Color(c.color)) else null,
     ) {
         Column(
-            Modifier.padding(vertical = 8.dp, horizontal = 4.dp).fillMaxWidth(),
+            Modifier.padding(vertical = 6.dp, horizontal = 2.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(c.icono, style = MaterialTheme.typography.headlineSmall)
+            Text(c.icono, style = MaterialTheme.typography.titleLarge)
             Text(
                 c.nombre,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
