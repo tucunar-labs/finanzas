@@ -1,0 +1,100 @@
+rules_version = '2';
+
+// Finanzas del hogar: solo los miembros de un hogar (máx. 2) leen y escriben sus datos.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logueado() { return request.auth != null; }
+    function rutaHogar(hid) { return /databases/$(database)/documents/households/$(hid); }
+
+    // Lecturas: estado actual. Escrituras: estado tras el lote (permite crear hogar + datos juntos).
+    function esMiembro(hid) { return logueado() && request.auth.uid in get(rutaHogar(hid)).data.miembros; }
+    function seraMiembro(hid) { return logueado() && request.auth.uid in getAfter(rutaHogar(hid)).data.miembros; }
+
+    function tipoValido(t) { return t in ['GASTO', 'INGRESO']; }
+    function texto(v, max) { return v is string && v.size() <= max; }
+    function colorValido(c) { return c is int && c >= 0 && c <= 4294967295; }
+
+    // Puntero usuario -> hogar. Cada uno solo el suyo.
+    match /users/{uid} {
+      allow read: if logueado() && request.auth.uid == uid;
+      allow write: if logueado() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['householdId'])
+        && request.resource.data.householdId is string;
+    }
+
+    // Código de invitación -> hogar. Se puede consultar un código puntual, nunca listar.
+    match /invites/{codigo} {
+      allow get: if logueado();
+      allow create: if codigo.matches('^[A-Z0-9]{6}$')
+        && request.resource.data.keys().hasOnly(['householdId'])
+        && seraMiembro(request.resource.data.householdId);
+      allow list, update, delete: if false;
+    }
+
+    match /households/{hid} {
+      allow read: if esMiembro(hid);
+
+      allow create: if logueado()
+        && request.resource.data.keys().hasOnly(['codigoInvitacion', 'miembros', 'creadoPor', 'creadoEn'])
+        && request.resource.data.miembros == [request.auth.uid]
+        && request.resource.data.creadoPor == request.auth.uid
+        && request.resource.data.codigoInvitacion.matches('^[A-Z0-9]{6}$');
+
+      // Unirse: solo agregarse a uno mismo, sin quitar a nadie, máximo 2 miembros.
+      allow update: if logueado()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['miembros'])
+        && request.resource.data.miembros.size() <= 2
+        && request.resource.data.miembros.toSet().difference(resource.data.miembros.toSet()) == [request.auth.uid].toSet()
+        && resource.data.miembros.toSet().difference(request.resource.data.miembros.toSet()).size() == 0;
+
+      allow delete: if false;
+
+      // Cada persona edita solo su propio nombre y color.
+      match /personas/{pid} {
+        allow read: if esMiembro(hid);
+        allow write: if pid == request.auth.uid && seraMiembro(hid)
+          && request.resource.data.keys().hasOnly(['nombre', 'color'])
+          && texto(request.resource.data.nombre, 40) && request.resource.data.nombre.size() > 0
+          && colorValido(request.resource.data.color);
+      }
+
+      // Las categorías se archivan, no se borran (el historial las sigue usando).
+      match /categorias/{cid} {
+        function categoriaValida(d) {
+          return d.keys().hasOnly(['nombre', 'icono', 'color', 'tipo', 'archivada', 'orden'])
+            && texto(d.nombre, 40) && d.nombre.size() > 0
+            && texto(d.icono, 16)
+            && colorValido(d.color)
+            && tipoValido(d.tipo)
+            && d.archivada is bool
+            && d.orden is int;
+        }
+        allow read: if esMiembro(hid);
+        allow create, update: if seraMiembro(hid) && categoriaValida(request.resource.data);
+        allow delete: if false;
+      }
+
+      match /movimientos/{mid} {
+        function movimientoValido(d) {
+          return d.keys().hasAll(['tipo', 'monto', 'categoriaId', 'personaId', 'fecha', 'creadoPor', 'creadoEn'])
+            && d.keys().hasOnly(['tipo', 'monto', 'categoriaId', 'personaId', 'fecha', 'nota', 'creadoPor', 'creadoEn'])
+            && tipoValido(d.tipo)
+            && d.monto is int && d.monto > 0
+            && d.categoriaId is string && d.categoriaId.size() > 0
+            && d.personaId is string && d.personaId.size() > 0
+            && d.fecha is string && d.fecha.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && (!('nota' in d) || texto(d.nota, 500))
+            && d.creadoEn is timestamp;
+        }
+        allow read: if esMiembro(hid);
+        allow create: if seraMiembro(hid) && movimientoValido(request.resource.data)
+          && request.resource.data.creadoPor == request.auth.uid;
+        allow update: if esMiembro(hid) && movimientoValido(request.resource.data)
+          && request.resource.data.creadoPor == resource.data.creadoPor
+          && request.resource.data.creadoEn == resource.data.creadoEn;
+        allow delete: if esMiembro(hid);
+      }
+    }
+  }
+}

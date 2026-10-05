@@ -1,0 +1,14 @@
+.gradle/
+build/
+/local.properties
+.idea/
+*.iml
+.kotlin/
+captures/
+# Firebase: no es secreto crítico, pero no lo versionamos
+app/google-services.json
+# Firma release
+keystore/
+*.jks
+keystore.properties
+.env*
