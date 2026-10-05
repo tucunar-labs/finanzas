@@ -6,3 +6,6 @@
 
 # WorkManager (lo usa Glance para el widget): Room instancia WorkDatabase_Impl por reflexión.
 -keep class * extends androidx.room.RoomDatabase { <init>(); }
+# WorkManager crea InputMergers y Workers por reflexión; sus reglas propias no alcanzan con AGP 9.
+-keep class androidx.work.** { *; }
+-keep class * extends androidx.work.ListenableWorker { <init>(android.content.Context, androidx.work.WorkerParameters); }
