@@ -29,9 +29,9 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
-import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import cl.nuxapower.finanzas.MainActivity
@@ -40,11 +40,13 @@ import cl.nuxapower.finanzas.util.formatoClp
 /** Clave del extra con la categoría preelegida al abrir [GastoRapidoActivity]. */
 val CATEGORIA_ID = ActionParameters.Key<String>("categoriaId")
 
-// Grilla fija de 4×2: las filas se estiran para llenar el widget. No se usa LocalSize porque
+// Grilla fija de 2×4 con celdas horizontales (emoji + nombre en una línea): así el nombre puede
+// ser grande sin que la fila necesite mucho alto. Las filas se estiran para llenar el widget. No se usa LocalSize porque
 // el launcher de Xiaomi informa un alto menor al real y quedaba espacio vacío.
-private const val COLUMNAS = 4
-private const val FILAS = 2
-private val ALTO_ENCABEZADO = 64.dp
+// Ese launcher además escala el widget a ~60 %, por eso los textos son grandes en sp.
+private const val COLUMNAS = 2
+private const val FILAS = 4
+private val ALTO_ENCABEZADO = 88.dp
 private val MARGEN = 10.dp
 
 /**
@@ -92,7 +94,7 @@ private fun Encabezado(datos: DatosWidget?) {
             Text(
                 "Gasto rápido",
                 maxLines = 1,
-                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp, color = GlanceTheme.colors.onSurface),
+                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 30.sp, color = GlanceTheme.colors.onSurface),
             )
             if (datos != null) {
                 val detalle = buildString {
@@ -105,7 +107,7 @@ private fun Encabezado(datos: DatosWidget?) {
                     detalle,
                     maxLines = 1,
                     style = TextStyle(
-                        fontSize = 15.sp,
+                        fontSize = 22.sp,
                         color = if ((datos.restante ?: 0) < 0) ColorProvider(androidx.compose.ui.graphics.Color(0xFFE5534B))
                         else GlanceTheme.colors.onSurfaceVariant,
                     ),
@@ -114,14 +116,14 @@ private fun Encabezado(datos: DatosWidget?) {
         }
         // Botón principal: abre el teclado sin categoría elegida.
         Box(
-            GlanceModifier.cornerRadius(18.dp).background(GlanceTheme.colors.primary)
-                .padding(horizontal = 18.dp, vertical = 12.dp)
+            GlanceModifier.cornerRadius(28.dp).background(GlanceTheme.colors.primary)
+                .padding(horizontal = 26.dp, vertical = 16.dp)
                 .clickable(actionStartActivity<GastoRapidoActivity>()),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 "+ Gasto",
-                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 17.sp, color = GlanceTheme.colors.onPrimary),
+                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 26.sp, color = GlanceTheme.colors.onPrimary),
             )
         }
     }
@@ -141,26 +143,25 @@ private fun ColumnScope.Grilla(categorias: List<CategoriaWidget>) {
 @Composable
 private fun RowScope.Celda(c: CategoriaWidget) {
     // Ojo: fillMaxSize/fillMaxWidth anulan el peso en Glance y la celda se come la fila.
-    Box(GlanceModifier.defaultWeight().fillMaxHeight().padding(3.dp)) {
-        Column(
-            GlanceModifier.fillMaxSize().cornerRadius(16.dp)
+    Box(GlanceModifier.defaultWeight().fillMaxHeight().padding(4.dp)) {
+        Row(
+            GlanceModifier.fillMaxSize().cornerRadius(24.dp)
                 .background(GlanceTheme.colors.secondaryContainer)
+                .padding(horizontal = 14.dp)
                 .clickable(actionStartActivity<GastoRapidoActivity>(actionParametersOf(CATEGORIA_ID to c.id))),
-            horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(c.icono, maxLines = 1, style = TextStyle(fontSize = 30.sp))
-            // Nombre grande y en hasta 2 líneas ("Comida / fuera") para leerlo bien en el teléfono.
+            Text(c.icono, maxLines = 1, style = TextStyle(fontSize = 26.sp))
+            Spacer(GlanceModifier.width(10.dp))
+            // Nombre grande (el launcher de Xiaomi achica el widget) para leerlo bien en el teléfono.
             Text(
                 c.nombre,
-                maxLines = 2,
+                maxLines = 1,
                 style = TextStyle(
-                    fontSize = 17.sp,
+                    fontSize = 25.sp,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
                     color = GlanceTheme.colors.onSecondaryContainer,
                 ),
-                modifier = GlanceModifier.padding(horizontal = 2.dp),
             )
         }
     }

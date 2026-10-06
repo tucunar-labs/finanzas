@@ -22,8 +22,8 @@ android {
         applicationId = "cl.nuxapower.finanzas"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.2.5"
+        versionCode = 12
+        versionName = "1.2.7"
     }
 
     signingConfigs {
