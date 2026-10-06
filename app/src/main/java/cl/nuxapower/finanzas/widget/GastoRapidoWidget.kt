@@ -31,6 +31,7 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import cl.nuxapower.finanzas.MainActivity
@@ -148,11 +149,17 @@ private fun RowScope.Celda(c: CategoriaWidget) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(c.icono, maxLines = 1, style = TextStyle(fontSize = 34.sp))
+            Text(c.icono, maxLines = 1, style = TextStyle(fontSize = 30.sp))
+            // Nombre grande y en hasta 2 líneas ("Comida / fuera") para leerlo bien en el teléfono.
             Text(
                 c.nombre,
-                maxLines = 1,
-                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = GlanceTheme.colors.onSecondaryContainer),
+                maxLines = 2,
+                style = TextStyle(
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    color = GlanceTheme.colors.onSecondaryContainer,
+                ),
                 modifier = GlanceModifier.padding(horizontal = 2.dp),
             )
         }
