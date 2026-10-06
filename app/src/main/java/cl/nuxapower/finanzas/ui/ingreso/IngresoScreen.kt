@@ -1,6 +1,19 @@
 package cl.nuxapower.finanzas.ui.ingreso
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -75,6 +88,7 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
     val avisos = LocalAvisos.current
     val foco = LocalFocusManager.current
     var elegirFecha by remember { mutableStateOf(false) }
+    var editarNota by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         vm.eventos.collect { ev ->
@@ -100,6 +114,10 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
         }
     }
 
+    // En pantallas bajas (o con letra grande) se achican teclado y monto para que las categorías se vean.
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val compacto = maxHeight < 720.dp
+    val altoTecla = if (compacto) 44.dp else 52.dp
     Column(Modifier.fillMaxSize()) {
         if (e.editando) {
             TopAppBar(
@@ -116,7 +134,7 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
         }
 
         Column(Modifier.weight(1f).padding(horizontal = 16.dp)) {
-            if (!e.editando) Spacer(Modifier.height(12.dp))
+            if (!e.editando) Spacer(Modifier.height(if (compacto) 4.dp else 12.dp))
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 Tipo.entries.forEachIndexed { i, t ->
                     SegmentedButton(
@@ -141,19 +159,20 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
             }
             Text(
                 formatoClp(f.monto),
-                style = MaterialTheme.typography.displayMedium,
+                style = if (compacto) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Medium,
                 color = if (f.monto == 0L) MaterialTheme.colorScheme.outline else colorTipo(f.tipo),
                 textAlign = TextAlign.End,
                 maxLines = 1,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = if (compacto) 2.dp else 8.dp),
             )
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f),
+                // Al menos ~2 filas de categorías siempre visibles.
+                modifier = Modifier.weight(1f).heightIn(min = 120.dp),
             ) {
                 items(e.categorias, key = { it.id }) { c ->
                     CategoriaCelda(c, seleccionada = c.id == f.categoriaId) { vm.categoria(c.id) }
@@ -178,25 +197,20 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
                     label = { Text(formatoDiaCorto(f.fecha)) },
                     leadingIcon = { Icon(Icons.Filled.CalendarToday, null, Modifier.width(18.dp)) },
                 )
-            }
-
-            OutlinedTextField(
-                value = f.nota,
-                onValueChange = vm::nota,
-                placeholder = { Text("Nota (opcional)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            if (e.sugerencias.isNotEmpty() && f.nota.isBlank()) {
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    e.sugerencias.forEach { s ->
-                        SuggestionChip(onClick = { vm.nota(s) }, label = { Text(s, maxLines = 1) })
-                    }
-                }
+                // La nota va en un diálogo: así el teclado del sistema no tapa categorías ni monto.
+                FilterChip(
+                    selected = f.nota.isNotBlank(),
+                    onClick = { editarNota = true },
+                    label = {
+                        Text(
+                            f.nota.ifBlank { "Nota" },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 140.dp),
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Notes, null, Modifier.width(18.dp)) },
+                )
             }
 
             f.error?.let {
@@ -204,15 +218,70 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
             }
         }
 
-        Teclado(onTecla = vm::tecla, onSumar = vm::sumar, onBorrar = vm::borrar, onLimpiar = vm::limpiarMonto)
+        Teclado(
+            onTecla = vm::tecla,
+            onSumar = vm::sumar,
+            onBorrar = vm::borrar,
+            onLimpiar = vm::limpiarMonto,
+            altoTecla = altoTecla,
+        )
 
         Button(
             onClick = vm::guardar,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).height(56.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = if (compacto) 4.dp else 8.dp)
+                .height(if (compacto) 48.dp else 56.dp),
         ) { Text(if (e.editando) "Guardar cambios" else "Guardar", style = MaterialTheme.typography.titleMedium) }
+    }
     }
 
     if (elegirFecha) DialogoFecha(f.fecha, onElegir = vm::fecha, onCerrar = { elegirFecha = false })
+    if (editarNota) {
+        DialogoNota(
+            inicial = f.nota,
+            sugerencias = e.sugerencias,
+            onGuardar = { vm.nota(it); editarNota = false },
+            onCerrar = { editarNota = false },
+        )
+    }
+}
+
+@Composable
+private fun DialogoNota(inicial: String, sugerencias: List<String>, onGuardar: (String) -> Unit, onCerrar: () -> Unit) {
+    var texto by remember { mutableStateOf(inicial) }
+    val foco = remember { FocusRequester() }
+    LaunchedEffect(Unit) { foco.requestFocus() }
+    AlertDialog(
+        onDismissRequest = onCerrar,
+        title = { Text("Nota") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = texto,
+                    onValueChange = { texto = it.take(500) },
+                    placeholder = { Text("Opcional") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onGuardar(texto.trim()) }),
+                    modifier = Modifier.fillMaxWidth().focusRequester(foco),
+                )
+                if (sugerencias.isNotEmpty()) {
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        sugerencias.forEach { s ->
+                            SuggestionChip(onClick = { onGuardar(s) }, label = { Text(s, maxLines = 1) })
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onGuardar(texto.trim()) }) { Text("Listo") } },
+        dismissButton = {
+            if (inicial.isNotEmpty()) TextButton(onClick = { onGuardar("") }) { Text("Quitar") }
+            else TextButton(onClick = onCerrar) { Text("Cancelar") }
+        },
+    )
 }
 
 @Composable
@@ -240,9 +309,15 @@ private fun CategoriaCelda(c: Categoria, seleccionada: Boolean, onClick: () -> U
 
 /** Teclado numérico: "+" suma varios montos, ⌫ borra (mantener presionado = limpiar). */
 @Composable
-internal fun Teclado(onTecla: (String) -> Unit, onSumar: () -> Unit, onBorrar: () -> Unit, onLimpiar: () -> Unit) {
+internal fun Teclado(
+    onTecla: (String) -> Unit,
+    onSumar: () -> Unit,
+    onBorrar: () -> Unit,
+    onLimpiar: () -> Unit,
+    altoTecla: Dp = 52.dp,
+) {
     @Composable
-    fun RowScope.Digito(t: String) = Tecla(onClick = { onTecla(t) }) {
+    fun RowScope.Digito(t: String) = Tecla(onClick = { onTecla(t) }, alto = altoTecla) {
         Text(t, style = MaterialTheme.typography.headlineSmall)
     }
     Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
@@ -250,9 +325,9 @@ internal fun Teclado(onTecla: (String) -> Unit, onSumar: () -> Unit, onBorrar: (
             Row(Modifier.fillMaxWidth()) { fila.forEach { Digito(it) } }
         }
         Row(Modifier.fillMaxWidth()) {
-            Tecla(onClick = onSumar) { Text("+", style = MaterialTheme.typography.headlineSmall) }
+            Tecla(onClick = onSumar, alto = altoTecla) { Text("+", style = MaterialTheme.typography.headlineSmall) }
             Digito("0")
-            Tecla(onClick = onBorrar, onLongClick = onLimpiar) { Icon(Icons.AutoMirrored.Filled.Backspace, "Borrar") }
+            Tecla(onClick = onBorrar, onLongClick = onLimpiar, alto = altoTecla) { Icon(Icons.AutoMirrored.Filled.Backspace, "Borrar") }
         }
     }
 }
@@ -262,12 +337,13 @@ internal fun Teclado(onTecla: (String) -> Unit, onSumar: () -> Unit, onBorrar: (
 private fun RowScope.Tecla(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
+    alto: Dp = 52.dp,
     content: @Composable () -> Unit,
 ) {
     Box(
         Modifier
             .weight(1f)
-            .height(54.dp)
+            .height(alto)
             .padding(2.dp)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         contentAlignment = Alignment.Center,

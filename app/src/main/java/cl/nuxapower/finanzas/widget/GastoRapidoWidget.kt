@@ -2,13 +2,11 @@ package cl.nuxapower.finanzas.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
@@ -22,13 +20,15 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ColumnScope
+import androidx.glance.layout.RowScope
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -39,10 +39,11 @@ import cl.nuxapower.finanzas.util.formatoClp
 /** Clave del extra con la categoría preelegida al abrir [GastoRapidoActivity]. */
 val CATEGORIA_ID = ActionParameters.Key<String>("categoriaId")
 
-// Medidas de la grilla: celdas de tamaño fijo, tantas como quepan en el widget.
-private val ANCHO_CELDA = 70.dp
-private val ALTO_CELDA = 56.dp
-private val ALTO_ENCABEZADO = 52.dp
+// Grilla fija de 4×2: las filas se estiran para llenar el widget. No se usa LocalSize porque
+// el launcher de Xiaomi informa un alto menor al real y quedaba espacio vacío.
+private const val COLUMNAS = 4
+private const val FILAS = 2
+private val ALTO_ENCABEZADO = 56.dp
 private val MARGEN = 10.dp
 
 /**
@@ -65,7 +66,6 @@ class GastoRapidoReceiver : GlanceAppWidgetReceiver() {
 
 @Composable
 private fun Contenido(datos: DatosWidget?) {
-    val size = LocalSize.current
     Column(
         GlanceModifier.fillMaxSize().cornerRadius(24.dp)
             .background(GlanceTheme.colors.widgetBackground).padding(MARGEN),
@@ -78,8 +78,8 @@ private fun Contenido(datos: DatosWidget?) {
                 modifier = GlanceModifier.padding(top = 8.dp, start = 4.dp).clickable(actionStartActivity<MainActivity>()),
             )
         } else {
-            Spacer(GlanceModifier.height(6.dp))
-            Grilla(datos.categorias, size)
+            Spacer(GlanceModifier.height(4.dp))
+            Grilla(datos.categorias)
         }
     }
 }
@@ -91,7 +91,7 @@ private fun Encabezado(datos: DatosWidget?) {
             Text(
                 "Gasto rápido",
                 maxLines = 1,
-                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 15.sp, color = GlanceTheme.colors.onSurface),
+                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 17.sp, color = GlanceTheme.colors.onSurface),
             )
             if (datos != null) {
                 val detalle = buildString {
@@ -104,7 +104,7 @@ private fun Encabezado(datos: DatosWidget?) {
                     detalle,
                     maxLines = 1,
                     style = TextStyle(
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = if ((datos.restante ?: 0) < 0) ColorProvider(androidx.compose.ui.graphics.Color(0xFFE5534B))
                         else GlanceTheme.colors.onSurfaceVariant,
                     ),
@@ -114,49 +114,45 @@ private fun Encabezado(datos: DatosWidget?) {
         // Botón principal: abre el teclado sin categoría elegida.
         Box(
             GlanceModifier.cornerRadius(18.dp).background(GlanceTheme.colors.primary)
-                .padding(horizontal = 14.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
                 .clickable(actionStartActivity<GastoRapidoActivity>()),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 "+ Gasto",
-                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 13.sp, color = GlanceTheme.colors.onPrimary),
+                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 15.sp, color = GlanceTheme.colors.onPrimary),
             )
         }
     }
 }
 
 @Composable
-private fun Grilla(categorias: List<CategoriaWidget>, size: DpSize) {
-    val ancho = size.width - MARGEN * 2
-    val alto = size.height - MARGEN * 2 - ALTO_ENCABEZADO - 6.dp
-    val columnas = (ancho / ANCHO_CELDA).toInt().coerceIn(2, 6)
-    val filas = (alto / ALTO_CELDA).toInt().coerceAtLeast(1)
-    categorias.take(columnas * filas).chunked(columnas).forEach { fila ->
-        Row(GlanceModifier.fillMaxWidth().height(ALTO_CELDA)) {
+private fun ColumnScope.Grilla(categorias: List<CategoriaWidget>) {
+    categorias.take(COLUMNAS * FILAS).chunked(COLUMNAS).forEach { fila ->
+        Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
             fila.forEach { c -> Celda(c) }
             // Relleno para que la última fila mantenga el ancho de las celdas.
-            repeat(columnas - fila.size) { Spacer(GlanceModifier.defaultWeight()) }
+            repeat(COLUMNAS - fila.size) { Spacer(GlanceModifier.defaultWeight()) }
         }
     }
 }
 
 @Composable
-private fun androidx.glance.layout.RowScope.Celda(c: CategoriaWidget) {
+private fun RowScope.Celda(c: CategoriaWidget) {
     // Ojo: fillMaxSize/fillMaxWidth anulan el peso en Glance y la celda se come la fila.
-    Box(GlanceModifier.defaultWeight().height(ALTO_CELDA).padding(3.dp)) {
+    Box(GlanceModifier.defaultWeight().fillMaxHeight().padding(3.dp)) {
         Column(
-            GlanceModifier.fillMaxSize().cornerRadius(14.dp)
+            GlanceModifier.fillMaxSize().cornerRadius(16.dp)
                 .background(GlanceTheme.colors.secondaryContainer)
                 .clickable(actionStartActivity<GastoRapidoActivity>(actionParametersOf(CATEGORIA_ID to c.id))),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(c.icono, maxLines = 1, style = TextStyle(fontSize = 18.sp))
+            Text(c.icono, maxLines = 1, style = TextStyle(fontSize = 26.sp))
             Text(
                 c.nombre,
                 maxLines = 1,
-                style = TextStyle(fontSize = 10.sp, color = GlanceTheme.colors.onSecondaryContainer),
+                style = TextStyle(fontSize = 12.sp, color = GlanceTheme.colors.onSecondaryContainer),
                 modifier = GlanceModifier.padding(horizontal = 4.dp),
             )
         }
