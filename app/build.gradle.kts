@@ -38,7 +38,15 @@ android {
     }
 
     buildTypes {
+        // Desarrollo local: el debug usa los emuladores de Firebase (scripts/dev.sh) y ofrece un
+        // login falso, sin Google real. -Pfinanzas.emulador=<ip> para un teléfono en la LAN,
+        // o -Pfinanzas.emulador= (vacío) para que el debug use Firebase real.
+        debug {
+            val host = (project.findProperty("finanzas.emulador") as String?) ?: "10.0.2.2"
+            buildConfigField("String", "EMULADOR_HOST", "\"$host\"")
+        }
         release {
+            buildConfigField("String", "EMULADOR_HOST", "\"\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -53,6 +61,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

@@ -84,6 +84,25 @@ El proyecto actual ya está creado: `finanzas-hogar-b2ac` (cuenta alonso@tucunar
 6. **google-services.json**: descargarlo y dejarlo en `app/google-services.json` (no se versiona).
    Si se agregan huellas después, hay que volver a descargarlo.
 
+## Desarrollo local (sin Google ni Firebase reales)
+
+```
+scripts/dev.sh                # emuladores de Firebase + emulador Android + compila e instala el debug
+scripts/dev.sh --sin-compilar # reinstala el último debug compilado
+scripts/dev.sh --parar        # detiene los emuladores de Firebase (los datos quedan en .emulador/)
+```
+
+- El build **debug** se conecta a los emuladores de Firebase (Auth :9099, Firestore :8085) en
+  `10.0.2.2` (la máquina host vista desde el emulador Android) y la pantalla de login muestra
+  **"Entrar como nuxapower@gmail.com (dev)"**: el emulador de Auth acepta un ID token de Google falso,
+  así el flujo es el mismo que en producción pero sin cuenta real. Los datos no tocan producción.
+- Los emuladores cargan las mismas `firestore.rules` (sirven para probarlas). UI: http://127.0.0.1:4000.
+- Teléfono físico en la LAN: `./gradlew assembleDebug -Pfinanzas.emulador=<ip-del-pc>`. Para que el debug
+  use Firebase real: `-Pfinanzas.emulador=` (vacío).
+- El build **release** no cambia: `EMULADOR_HOST` es `""` y el botón dev no existe.
+- Requiere Java 21+ para los emuladores (el script usa `/usr/lib/jvm/java-26-openjdk`) y `npx`.
+  El emulador Android es el AVD `pixel_36` (`~/bin/emu`).
+
 ## Compilar e instalar
 
 Requisitos: JDK 17+, Android SDK con platform 37 (`sdk.dir` en `local.properties`).

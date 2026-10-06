@@ -14,3 +14,6 @@ keystore.properties
 .env*
 dist/
 
+# Datos locales de los emuladores de Firebase
+.emulador/
+*-debug.log

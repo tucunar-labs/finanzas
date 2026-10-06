@@ -28,6 +28,13 @@ class LoginViewModel @Inject constructor(private val auth: AuthRepository) : Vie
             .onFailure { _estado.value = LoginEstado(error = "No se pudo iniciar sesión: ${it.message}") }
     }
 
+    fun entrarDev() = viewModelScope.launch {
+        _estado.value = LoginEstado(cargando = true)
+        runCatching { auth.entrarDev("nuxapower@gmail.com", "Alonso (dev)") }
+            .onSuccess { _estado.value = LoginEstado() }
+            .onFailure { _estado.value = LoginEstado(error = "Login dev falló (¿corre scripts/dev.sh?): ${it.message}") }
+    }
+
     fun falloCredencial(e: Throwable) {
         _estado.value = LoginEstado(error = mensajeCredencial(e))
     }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,6 +26,7 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import cl.nuxapower.finanzas.BuildConfig
 import cl.nuxapower.finanzas.R
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -62,6 +64,11 @@ fun LoginScreen(vm: LoginViewModel = hiltViewModel()) {
                         .onFailure { vm.falloCredencial(it) }
                 }
             }) { Text("Entrar con Google") }
+            // Solo en debug con emuladores (en release la condición es constante y R8 lo elimina).
+            if (BuildConfig.EMULADOR_HOST.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = vm::entrarDev) { Text("Entrar como nuxapower@gmail.com (dev)") }
+            }
         }
         estado.error?.let {
             Spacer(Modifier.height(16.dp))

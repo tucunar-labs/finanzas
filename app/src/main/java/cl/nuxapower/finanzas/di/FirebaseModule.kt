@@ -1,5 +1,6 @@
 package cl.nuxapower.finanzas.di
 
+import cl.nuxapower.finanzas.BuildConfig
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
@@ -24,11 +25,15 @@ object FirebaseModule {
 
     @Provides
     @Singleton
-    fun auth(): FirebaseAuth = FirebaseAuth.getInstance()
+    fun auth(): FirebaseAuth = FirebaseAuth.getInstance().apply {
+        if (BuildConfig.EMULADOR_HOST.isNotEmpty()) useEmulator(BuildConfig.EMULADOR_HOST, 9099)
+    }
 
     @Provides
     @Singleton
     fun firestore(): FirebaseFirestore = FirebaseFirestore.getInstance().apply {
+        // Debug: emulador local de Firestore (scripts/dev.sh). Debe ir antes de cualquier uso.
+        if (BuildConfig.EMULADOR_HOST.isNotEmpty()) useEmulator(BuildConfig.EMULADOR_HOST, 8085)
         // Caché persistente explícita: los movimientos se guardan local y sincronizan solos.
         firestoreSettings = FirebaseFirestoreSettings.Builder()
             .setLocalCacheSettings(
