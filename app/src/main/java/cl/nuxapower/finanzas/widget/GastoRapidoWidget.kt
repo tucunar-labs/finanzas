@@ -40,12 +40,12 @@ import cl.nuxapower.finanzas.util.formatoClp
 /** Clave del extra con la categoría preelegida al abrir [GastoRapidoActivity]. */
 val CATEGORIA_ID = ActionParameters.Key<String>("categoriaId")
 
-// Grilla fija de 2×4 con celdas horizontales (emoji + nombre en una línea): así el nombre puede
-// ser grande sin que la fila necesite mucho alto. Las filas se estiran para llenar el widget. No se usa LocalSize porque
+// Grilla fija de 2×2 con celdas grandes: las 4 primeras categorías según su orden (se cambia en
+// Ajustes → Categorías); el resto queda en "+ Gasto". Las filas se estiran para llenar el widget. No se usa LocalSize porque
 // el launcher de Xiaomi informa un alto menor al real y quedaba espacio vacío.
 // Ese launcher además escala el widget a ~60 %, por eso los textos son grandes en sp.
 private const val COLUMNAS = 2
-private const val FILAS = 4
+private const val FILAS = 2
 private val ALTO_ENCABEZADO = 88.dp
 private val MARGEN = 10.dp
 
@@ -143,16 +143,15 @@ private fun ColumnScope.Grilla(categorias: List<CategoriaWidget>) {
 @Composable
 private fun RowScope.Celda(c: CategoriaWidget) {
     // Ojo: fillMaxSize/fillMaxWidth anulan el peso en Glance y la celda se come la fila.
-    Box(GlanceModifier.defaultWeight().fillMaxHeight().padding(4.dp)) {
-        Row(
-            GlanceModifier.fillMaxSize().cornerRadius(24.dp)
+    Box(GlanceModifier.defaultWeight().fillMaxHeight().padding(6.dp)) {
+        Column(
+            GlanceModifier.fillMaxSize().cornerRadius(28.dp)
                 .background(GlanceTheme.colors.secondaryContainer)
-                .padding(horizontal = 14.dp)
                 .clickable(actionStartActivity<GastoRapidoActivity>(actionParametersOf(CATEGORIA_ID to c.id))),
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(c.icono, maxLines = 1, style = TextStyle(fontSize = 26.sp))
-            Spacer(GlanceModifier.width(10.dp))
+            Text(c.icono, maxLines = 1, style = TextStyle(fontSize = 34.sp))
             // Nombre grande (el launcher de Xiaomi achica el widget) para leerlo bien en el teléfono.
             Text(
                 c.nombre,
@@ -162,6 +161,7 @@ private fun RowScope.Celda(c: CategoriaWidget) {
                     fontWeight = FontWeight.Bold,
                     color = GlanceTheme.colors.onSecondaryContainer,
                 ),
+                modifier = GlanceModifier.padding(horizontal = 8.dp),
             )
         }
     }
