@@ -102,20 +102,16 @@ origen desconocido". En Xiaomi/HyperOS `adb install` suele quedar bloqueado por 
 activo "Instalar vía USB": es más simple `adb push app-release.apk /sdcard/Download/` e instalar desde *Archivos*.
 Para actualizar, instalar el APK nuevo encima (misma clave de firma); los datos viven en Firestore.
 
-### Actualizaciones por Neo Store (repositorio F-Droid privado)
+### Actualizaciones por F-Droid (repositorio privado "Nuxapower Apps")
 
-Las versiones se publican en un repositorio F-Droid propio servido por Caddy en el VPS
-(`https://apps.nuxapower.cl/<ruta-secreta>/repo`, archivos en `/srv/fdroid`). Cada teléfono agrega el
-repositorio una vez en **Neo Store** (URL + huella, o abriendo el enlace `fdroid/.enlace_repo`) y desde
-ahí recibe las actualizaciones.
+Las versiones se publican en el repositorio F-Droid general de mis apps, que vive en `~/code/nuxapower-apps`
+(ver su README). Cada teléfono lo agrega una vez en F-Droid (o Neo Store) con la URL + huella y desde ahí
+recibe las actualizaciones.
 
 ```
 ./gradlew :app:assembleRelease      # subir antes versionCode/versionName en app/build.gradle.kts
-scripts/publicar-apk.sh             # copia el APK al repo, deja las 5 versiones más nuevas, firma el índice y sube
+scripts/publicar-apk.sh             # llama a ~/code/nuxapower-apps/publicar.sh con el APK release
 ```
-
-`fdroid/` no se versiona: tiene `config.yml` y `keystore.p12` (firma del índice; respaldar en Bitwarden),
-`.ruta_secreta` y `.enlace_repo`. Requiere `fdroidserver` (`uv tool install fdroidserver --with 'setuptools<81'`).
 
 Primer uso: una persona toca **Crear hogar** y comparte el código de 6 caracteres (Ajustes → compartir);
 la otra lo ingresa en **Unirme**.
