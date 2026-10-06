@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícono temático (Android 13+): solo silueta; el sistema le pone el color. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:scaleX="0.82" android:scaleY="0.82" android:pivotX="54" android:pivotY="53">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M45,31a16,16 0 1 1 32,0a16,16 0 1 1 -32,0" />
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M35,42H73Q86,42 86,55V57H72Q62.5,57 62.5,66.5Q62.5,76 72,76H86Q86,86 73,86H35Q22,86 22,73V55Q22,42 35,42Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M72,59H91V74H72Q64.5,74 64.5,66.5Q64.5,59 72,59ZM68,66.5a4.2,4.2 0 1 0 8.4,0a4.2,4.2 0 1 0 -8.4,0Z" />
+    </group>
+</vector>
