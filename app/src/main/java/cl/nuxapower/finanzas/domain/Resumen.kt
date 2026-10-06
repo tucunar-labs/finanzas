@@ -4,6 +4,7 @@ import cl.nuxapower.finanzas.data.model.Categoria
 import cl.nuxapower.finanzas.data.model.Movimiento
 import cl.nuxapower.finanzas.data.model.Persona
 import cl.nuxapower.finanzas.data.model.Tipo
+import java.time.LocalDate
 import java.time.YearMonth
 
 data class Parte(
@@ -30,6 +31,11 @@ data class Resumen(
     val ingresoPorCategoria: List<Parte> = emptyList(),
     /** Últimos 6 meses terminando en [mes], del más antiguo al más reciente. */
     val tendencia: List<PuntoMes> = emptyList(),
+    /**
+     * Si [mes] es el mes en curso, la comparación usa solo los días 1..corteDia del mes anterior
+     * (comparar 6 días contra un mes completo exagera la baja). null = mes completo.
+     */
+    val corteDia: Int? = null,
 ) {
     val balance: Long get() = ingresos - gastos
     val balanceMesAnterior: Long get() = ingresosMesAnterior - gastosMesAnterior
@@ -44,9 +50,13 @@ fun calcularResumen(
     categorias: List<Categoria>,
     personas: List<Persona>,
     mes: YearMonth,
+    hoy: LocalDate = LocalDate.now(),
 ): Resumen {
+    val corteDia = hoy.dayOfMonth.takeIf { YearMonth.from(hoy) == mes }
     val delMes = movimientos.filter { YearMonth.from(it.fecha) == mes }
-    val anterior = movimientos.filter { YearMonth.from(it.fecha) == mes.minusMonths(1) }
+    val anterior = movimientos.filter {
+        YearMonth.from(it.fecha) == mes.minusMonths(1) && (corteDia == null || it.fecha.dayOfMonth <= corteDia)
+    }
     fun List<Movimiento>.total(t: Tipo) = filter { it.tipo == t }.sumOf { it.monto }
 
     val gastos = delMes.filter { it.tipo == Tipo.GASTO }
@@ -96,5 +106,6 @@ fun calcularResumen(
             val delM = movimientos.filter { YearMonth.from(it.fecha) == m }
             PuntoMes(m, delM.total(Tipo.INGRESO), delM.total(Tipo.GASTO))
         },
+        corteDia = corteDia,
     )
 }

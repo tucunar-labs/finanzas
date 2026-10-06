@@ -48,7 +48,9 @@ class DominioTest {
     }
 
     @Test fun resumenDelMes() {
-        val r = calcularResumen(movs, cats, pers, YearMonth.of(2026, 10))
+        // Mes cerrado (hoy = noviembre): compara contra septiembre completo.
+        val r = calcularResumen(movs, cats, pers, YearMonth.of(2026, 10), hoy = LocalDate.of(2026, 11, 1))
+        assertNull(r.corteDia)
         assertEquals(1_000_000, r.ingresos)
         assertEquals(40_000, r.gastos)
         assertEquals(960_000, r.balance)
@@ -64,6 +66,15 @@ class DominioTest {
         assertEquals(6, r.tendencia.size)
         assertEquals(YearMonth.of(2026, 5), r.tendencia.first().mes)
         assertEquals(listOf(800_000L to 20_000L, 1_000_000L to 40_000L), r.tendencia.takeLast(2).map { it.ingresos to it.gastos })
+    }
+
+    @Test fun mesEnCursoComparaMismoPeriodo() {
+        // Hoy es 3 de octubre: del mes anterior solo cuentan los días 1..3 (sueldo del 1), no el gasto del 15.
+        val r = calcularResumen(movs, cats, pers, YearMonth.of(2026, 10), hoy = LocalDate.of(2026, 10, 3))
+        assertEquals(3, r.corteDia)
+        assertEquals(800_000, r.ingresosMesAnterior)
+        assertEquals(0, r.gastosMesAnterior)
+        assertEquals(0, r.gastoPorCategoria.first { it.id == "super" }.montoMesAnterior)
     }
 
     @Test fun variacionPorcentual() {

@@ -136,7 +136,7 @@ fun MovimientosScreen(onEditar: (String) -> Unit, vm: MovimientosViewModel = hil
                                 modifier = Modifier.weight(1f),
                             )
                             Text(
-                                formatoClp(dia.neto),
+                                (if (dia.neto > 0) "+" else "") + formatoClp(dia.neto),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.outline,
                             )

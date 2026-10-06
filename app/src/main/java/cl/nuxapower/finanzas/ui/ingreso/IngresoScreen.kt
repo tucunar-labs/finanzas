@@ -167,12 +167,14 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
                 modifier = Modifier.fillMaxWidth().padding(vertical = if (compacto) 2.dp else 8.dp),
             )
 
+            // El espacio libre queda arriba: categorías, chips y teclado juntos abajo, al alcance del pulgar.
+            Spacer(Modifier.weight(1f))
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                // Al menos ~2 filas de categorías siempre visibles.
-                modifier = Modifier.weight(1f).heightIn(min = 120.dp),
+                // Hasta ~3 filas visibles; con más categorías la grilla hace scroll.
+                modifier = Modifier.heightIn(max = if (compacto) 150.dp else 230.dp),
             ) {
                 items(e.categorias, key = { it.id }) { c ->
                     CategoriaCelda(c, seleccionada = c.id == f.categoriaId) { vm.categoria(c.id) }

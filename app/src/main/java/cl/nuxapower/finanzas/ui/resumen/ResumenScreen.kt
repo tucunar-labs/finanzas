@@ -64,11 +64,15 @@ fun ResumenScreen(onVerMovimientos: () -> Unit, vm: ResumenViewModel = hiltViewM
         if (res == null) {
             Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
         } else {
+            // "vs 1–6 sep" en el mes en curso (mismo período), "vs septiembre" en meses cerrados.
+            val anterior = res.mes.minusMonths(1)
+            val etiqueta = res.corteDia?.let { "1–$it ${anterior.format(DateTimeFormatter.ofPattern("MMM", localeCl))}" }
+                ?: anterior.format(DateTimeFormatter.ofPattern("MMMM", localeCl))
             Column(
                 Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Totales(res)
+                Totales(res, etiqueta)
                 Seccion("Por categoría") {
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                         Tipo.entries.forEachIndexed { i, t ->
@@ -82,13 +86,13 @@ fun ResumenScreen(onVerMovimientos: () -> Unit, vm: ResumenViewModel = hiltViewM
                     val partes = if (tipoCategorias == Tipo.GASTO) res.gastoPorCategoria else res.ingresoPorCategoria
                     if (partes.isEmpty()) SinDatos(tipoCategorias)
                     partes.forEach { p ->
-                        Barra(p, mostrarAnterior = true) { ver(tipoCategorias, categoriaId = p.id) }
+                        Barra(p, anterior = etiqueta) { ver(tipoCategorias, categoriaId = p.id) }
                     }
                 }
                 Seccion("Gasto por persona") {
                     if (res.gastoPorPersona.isEmpty()) SinDatos(Tipo.GASTO)
                     res.gastoPorPersona.forEach { p ->
-                        Barra(p, mostrarAnterior = false) { ver(Tipo.GASTO, personaId = p.id) }
+                        Barra(p, anterior = null) { ver(Tipo.GASTO, personaId = p.id) }
                     }
                 }
                 Seccion("Últimos 6 meses") { Tendencia(res.tendencia) }
@@ -98,17 +102,18 @@ fun ResumenScreen(onVerMovimientos: () -> Unit, vm: ResumenViewModel = hiltViewM
 }
 
 @Composable
-private fun Totales(r: Resumen) {
+private fun Totales(r: Resumen, etiqueta: String) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            FilaTotal("Ingresos", r.ingresos, r.ingresosMesAnterior, ColoresMonto.ingreso(), subirEsBueno = true)
-            FilaTotal("Gastos", r.gastos, r.gastosMesAnterior, ColoresMonto.gasto(), subirEsBueno = false)
+            FilaTotal("Ingresos", r.ingresos, r.ingresosMesAnterior, ColoresMonto.ingreso(), subirEsBueno = true, etiqueta = etiqueta)
+            FilaTotal("Gastos", r.gastos, r.gastosMesAnterior, ColoresMonto.gasto(), subirEsBueno = false, etiqueta = etiqueta)
             FilaTotal(
                 "Balance",
                 r.balance,
                 r.balanceMesAnterior,
                 if (r.balance >= 0) ColoresMonto.ingreso() else ColoresMonto.gasto(),
                 subirEsBueno = true,
+                etiqueta = etiqueta,
                 destacado = true,
             )
         }
@@ -122,6 +127,7 @@ private fun FilaTotal(
     anterior: Long,
     color: Color,
     subirEsBueno: Boolean,
+    etiqueta: String,
     destacado: Boolean = false,
 ) {
     Column {
@@ -135,7 +141,7 @@ private fun FilaTotal(
             )
         }
         Text(
-            comparacion(monto, anterior),
+            comparacion(monto, anterior, etiqueta),
             style = MaterialTheme.typography.bodySmall,
             color = colorComparacion(monto - anterior, subirEsBueno),
             modifier = Modifier.align(Alignment.End),
@@ -143,8 +149,8 @@ private fun FilaTotal(
     }
 }
 
-/** "▲ 12% vs mes anterior ($450.000)" */
-private fun comparacion(actual: Long, anterior: Long): String {
+/** "▲ 12% vs 1–6 sep ($450.000)" */
+private fun comparacion(actual: Long, anterior: Long, etiqueta: String): String {
     val dif = actual - anterior
     val flecha = when {
         dif > 0 -> "▲"
@@ -152,7 +158,7 @@ private fun comparacion(actual: Long, anterior: Long): String {
         else -> "="
     }
     val pct = variacion(actual, anterior)?.let { " ${kotlin.math.abs(it)}%" } ?: ""
-    return "$flecha$pct vs mes anterior (${formatoClp(anterior)})"
+    return "$flecha$pct vs $etiqueta (${formatoClp(anterior)})"
 }
 
 @Composable
@@ -228,7 +234,7 @@ private fun formatoCorto(m: Long): String {
 
 /** Barra horizontal con porcentaje del total de gastos del mes. */
 @Composable
-private fun Barra(p: Parte, mostrarAnterior: Boolean, onClick: () -> Unit) {
+private fun Barra(p: Parte, anterior: String?, onClick: () -> Unit) {
     Column(Modifier.clickable(onClick = onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (p.icono.isNotEmpty()) Text(p.icono) else Punto(p.color)
@@ -252,10 +258,10 @@ private fun Barra(p: Parte, mostrarAnterior: Boolean, onClick: () -> Unit) {
                     .clip(RoundedCornerShape(4.dp)).background(Color(p.color))
             )
         }
-        if (mostrarAnterior) {
+        if (anterior != null) {
             val pct = variacion(p.monto, p.montoMesAnterior)
             Text(
-                "Mes anterior: ${formatoClp(p.montoMesAnterior)}" +
+                "${anterior.replaceFirstChar { it.titlecase(localeCl) }}: ${formatoClp(p.montoMesAnterior)}" +
                     (pct?.let { " (${if (it > 0) "+" else ""}$it%)" } ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
