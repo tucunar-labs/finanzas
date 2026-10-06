@@ -143,7 +143,7 @@ private fun FilaTotal(
         Text(
             comparacion(monto, anterior, etiqueta),
             style = MaterialTheme.typography.bodySmall,
-            color = colorComparacion(monto - anterior, subirEsBueno),
+            color = colorComparacion(if (variacion(monto, anterior) == 0) 0 else monto - anterior, subirEsBueno),
             modifier = Modifier.align(Alignment.End),
         )
     }
@@ -153,6 +153,8 @@ private fun FilaTotal(
 private fun comparacion(actual: Long, anterior: Long, etiqueta: String): String {
     val dif = actual - anterior
     val flecha = when {
+        // Una variación que redondea a 0 % no es ni subida ni bajada.
+        variacion(actual, anterior) == 0 -> "≈"
         dif > 0 -> "▲"
         dif < 0 -> "▼"
         else -> "="

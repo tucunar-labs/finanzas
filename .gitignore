@@ -17,3 +17,4 @@ dist/
 # Datos locales de los emuladores de Firebase
 .emulador/
 *-debug.log
+app/src/debug/google-services.json

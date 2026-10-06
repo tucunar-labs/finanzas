@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mantener presionado el ícono de la app: ir directo a cargar un gasto o un ingreso. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="nuevo_gasto"
+        android:enabled="true"
+        android:icon="@drawable/ic_atajo_gasto"
+        android:shortcutShortLabel="@string/atajo_gasto">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="cl.nuxapower.finanzas.MainActivity"
+            android:targetPackage="cl.nuxapower.finanzas.dev">
+            <extra android:name="tipo" android:value="GASTO" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="nuevo_ingreso"
+        android:enabled="true"
+        android:icon="@drawable/ic_atajo_ingreso"
+        android:shortcutShortLabel="@string/atajo_ingreso">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="cl.nuxapower.finanzas.MainActivity"
+            android:targetPackage="cl.nuxapower.finanzas.dev">
+            <extra android:name="tipo" android:value="INGRESO" />
+        </intent>
+    </shortcut>
+</shortcuts>

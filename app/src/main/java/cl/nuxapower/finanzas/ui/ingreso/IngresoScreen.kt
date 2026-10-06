@@ -77,7 +77,9 @@ import cl.nuxapower.finanzas.ui.comun.DialogoFecha
 import cl.nuxapower.finanzas.ui.comun.LocalAvisos
 import cl.nuxapower.finanzas.ui.comun.Punto
 import cl.nuxapower.finanzas.ui.comun.colorTipo
+import cl.nuxapower.finanzas.ui.theme.ColoresMonto
 import cl.nuxapower.finanzas.util.formatoClp
+import cl.nuxapower.finanzas.util.formatoMes
 import cl.nuxapower.finanzas.util.formatoDiaCorto
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -167,6 +169,8 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
                 modifier = Modifier.fillMaxWidth().padding(vertical = if (compacto) 2.dp else 8.dp),
             )
 
+            e.contexto?.let { LineaContexto(it) }
+
             // El espacio libre queda arriba: categorías, chips y teclado juntos abajo, al alcance del pulgar.
             Spacer(Modifier.weight(1f))
             LazyVerticalGrid(
@@ -245,6 +249,34 @@ fun IngresoScreen(onCerrar: () -> Unit = {}, vm: IngresoViewModel = hiltViewMode
             onCerrar = { editarNota = false },
         )
     }
+}
+
+/** "Octubre: $185.100 en gastos" o "🛒 Supermercado: quedan $228.900 → quedarían $216.900". */
+@Composable
+private fun LineaContexto(c: Contexto) {
+    val (texto, color) = when (c) {
+        is Contexto.TotalMes -> {
+            val que = if (c.tipo == Tipo.GASTO) "en gastos" else "en ingresos"
+            "${formatoMes(c.mes)}: ${formatoClp(c.total)} $que" to MaterialTheme.colorScheme.outline
+        }
+        is Contexto.Presupuesto -> {
+            val base = "${c.categoria.icono} ${c.categoria.nombre}: " +
+                if (c.restante >= 0) "quedan ${formatoClp(c.restante)}" else "pasados por ${formatoClp(-c.restante)}"
+            val despues = c.despues?.let {
+                if (it >= 0) " → quedarían ${formatoClp(it)}" else " → te pasarías por ${formatoClp(-it)}"
+            }.orEmpty()
+            val pasado = (c.despues ?: c.restante) < 0
+            base + despues to if (pasado) ColoresMonto.gasto() else MaterialTheme.colorScheme.outline
+        }
+    }
+    Text(
+        texto,
+        style = MaterialTheme.typography.bodyMedium,
+        color = color,
+        textAlign = TextAlign.End,
+        maxLines = 2,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable

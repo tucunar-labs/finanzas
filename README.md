@@ -99,6 +99,11 @@ scripts/dev.sh --parar        # detiene los emuladores de Firebase (los datos qu
 - Los emuladores cargan las mismas `firestore.rules` (sirven para probarlas). UI: http://127.0.0.1:4000.
 - Teléfono físico en la LAN: `./gradlew assembleDebug -Pfinanzas.emulador=<ip-del-pc>`. Para que el debug
   use Firebase real: `-Pfinanzas.emulador=` (vacío).
+- El debug se instala como **"Finanzas DEV"** (`cl.nuxapower.finanzas.dev`), junto a la app real sin pisarla.
+  En un teléfono: `DISPOSITIVO=<serial adb> scripts/dev.sh` (usa la IP del PC en la LAN). HyperOS pide
+  confirmar en pantalla la primera instalación de un paquete nuevo.
+- Datos de ejemplo (pareja ficticia, ~3 meses de movimientos, presupuestos): `scripts/sembrar-dev.py`
+  (`--limpiar` para empezar de cero). Solo escribe en el emulador.
 - El build **release** no cambia: `EMULADOR_HOST` es `""` y el botón dev no existe.
 - Requiere Java 21+ para los emuladores (el script usa `/usr/lib/jvm/java-26-openjdk`) y `npx`.
   El emulador Android es el AVD `pixel_36` (`~/bin/emu`).

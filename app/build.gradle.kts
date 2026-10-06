@@ -42,6 +42,9 @@ android {
         // login falso, sin Google real. -Pfinanzas.emulador=<ip> para un teléfono en la LAN,
         // o -Pfinanzas.emulador= (vacío) para que el debug use Firebase real.
         debug {
+            // Se instala junto a la app real ("Finanzas DEV"), sin pisar sus datos ni su widget.
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
             val host = (project.findProperty("finanzas.emulador") as String?) ?: "10.0.2.2"
             buildConfigField("String", "EMULADOR_HOST", "\"$host\"")
         }

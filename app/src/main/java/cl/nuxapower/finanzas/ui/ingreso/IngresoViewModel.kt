@@ -10,6 +10,7 @@ import cl.nuxapower.finanzas.data.model.Tipo
 import cl.nuxapower.finanzas.data.repo.HogarDatos
 import cl.nuxapower.finanzas.data.repo.MovimientoRepository
 import cl.nuxapower.finanzas.data.repo.Solicitudes
+import cl.nuxapower.finanzas.domain.calcularPresupuesto
 import cl.nuxapower.finanzas.util.formatoClp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
@@ -53,7 +54,15 @@ data class IngresoEstado(
     val editando: Boolean = false,
     /** Notas usadas antes en la categoría elegida (o en general), para no reescribirlas. */
     val sugerencias: List<String> = emptyList(),
+    /** Contexto bajo el monto: total del mes o, con categoría con presupuesto, cuánto queda. */
+    val contexto: Contexto? = null,
 )
+
+sealed interface Contexto {
+    data class TotalMes(val mes: java.time.YearMonth, val tipo: Tipo, val total: Long) : Contexto
+    /** [restante] antes de este movimiento; [despues] = restante − monto que se está ingresando. */
+    data class Presupuesto(val categoria: Categoria, val restante: Long, val despues: Long?) : Contexto
+}
 
 sealed interface EventoIngreso {
     data class Guardado(val id: String, val mensaje: String) : EventoIngreso
@@ -80,13 +89,14 @@ class IngresoViewModel @Inject constructor(
     val eventos: Flow<EventoIngreso> = _eventos.receiveAsFlow()
 
     val estado: StateFlow<IngresoEstado> =
-        combine(form, datos.categorias, datos.personas, datos.movimientos) { f, cats, pers, movs ->
+        combine(form, datos.categorias, datos.personas, datos.movimientos, datos.presupuestos) { f, cats, pers, movs, pres ->
             IngresoEstado(
                 form = f,
                 categorias = cats.filter { it.tipo == f.tipo && (!it.archivada || it.id == f.categoriaId) },
                 personas = pers,
                 editando = editandoId != null,
                 sugerencias = sugerenciasNota(movs.orEmpty(), f),
+                contexto = contexto(f, cats, movs.orEmpty(), pres),
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), IngresoEstado(editando = editandoId != null))
 
@@ -222,3 +232,25 @@ private fun sugerenciasNota(movs: List<Movimiento>, f: FormMovimiento): List<Str
         .distinctBy { it.lowercase() }
         .take(4)
         .toList()
+
+/**
+ * Lo que se muestra bajo el monto. Con una categoría de gasto con presupuesto: cuánto queda en el mes
+ * de la fecha elegida (sin contar el movimiento que se está editando) y cuánto quedaría con este monto.
+ */
+private fun contexto(
+    f: FormMovimiento,
+    cats: List<Categoria>,
+    movs: List<Movimiento>,
+    pres: Map<java.time.YearMonth, Map<String, Long>>,
+): Contexto {
+    val mes = java.time.YearMonth.from(f.fecha)
+    val otros = movs.filter { it.id != f.original?.id }
+    val linea = f.categoriaId?.takeIf { f.tipo == Tipo.GASTO }?.let { id ->
+        calcularPresupuesto(otros, cats, pres, mes).lineas.find { it.categoria.id == id && it.tienePresupuesto }
+    }
+    return if (linea != null) {
+        Contexto.Presupuesto(linea.categoria, linea.restante, (linea.restante - f.monto).takeIf { f.monto > 0 })
+    } else {
+        Contexto.TotalMes(mes, f.tipo, otros.filter { it.tipo == f.tipo && java.time.YearMonth.from(it.fecha) == mes }.sumOf { it.monto })
+    }
+}
