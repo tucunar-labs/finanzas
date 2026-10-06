@@ -43,7 +43,7 @@ val CATEGORIA_ID = ActionParameters.Key<String>("categoriaId")
 // el launcher de Xiaomi informa un alto menor al real y quedaba espacio vacío.
 private const val COLUMNAS = 4
 private const val FILAS = 2
-private val ALTO_ENCABEZADO = 56.dp
+private val ALTO_ENCABEZADO = 64.dp
 private val MARGEN = 10.dp
 
 /**
@@ -91,7 +91,7 @@ private fun Encabezado(datos: DatosWidget?) {
             Text(
                 "Gasto rápido",
                 maxLines = 1,
-                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 17.sp, color = GlanceTheme.colors.onSurface),
+                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp, color = GlanceTheme.colors.onSurface),
             )
             if (datos != null) {
                 val detalle = buildString {
@@ -104,7 +104,7 @@ private fun Encabezado(datos: DatosWidget?) {
                     detalle,
                     maxLines = 1,
                     style = TextStyle(
-                        fontSize = 13.sp,
+                        fontSize = 15.sp,
                         color = if ((datos.restante ?: 0) < 0) ColorProvider(androidx.compose.ui.graphics.Color(0xFFE5534B))
                         else GlanceTheme.colors.onSurfaceVariant,
                     ),
@@ -114,13 +114,13 @@ private fun Encabezado(datos: DatosWidget?) {
         // Botón principal: abre el teclado sin categoría elegida.
         Box(
             GlanceModifier.cornerRadius(18.dp).background(GlanceTheme.colors.primary)
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(horizontal = 18.dp, vertical = 12.dp)
                 .clickable(actionStartActivity<GastoRapidoActivity>()),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 "+ Gasto",
-                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 15.sp, color = GlanceTheme.colors.onPrimary),
+                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 17.sp, color = GlanceTheme.colors.onPrimary),
             )
         }
     }
@@ -148,12 +148,12 @@ private fun RowScope.Celda(c: CategoriaWidget) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(c.icono, maxLines = 1, style = TextStyle(fontSize = 26.sp))
+            Text(c.icono, maxLines = 1, style = TextStyle(fontSize = 34.sp))
             Text(
                 c.nombre,
                 maxLines = 1,
-                style = TextStyle(fontSize = 12.sp, color = GlanceTheme.colors.onSecondaryContainer),
-                modifier = GlanceModifier.padding(horizontal = 4.dp),
+                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = GlanceTheme.colors.onSecondaryContainer),
+                modifier = GlanceModifier.padding(horizontal = 2.dp),
             )
         }
     }
