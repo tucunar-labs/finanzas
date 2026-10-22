@@ -70,7 +70,7 @@ households/{hid}/presupuestos/{mes}  { montos: { categoriaId: monto } }       # 
 
 ## Puesta en marcha (desde cero)
 
-El proyecto actual ya está creado: `finanzas-hogar-b2ac` (cuenta alonso@tucunar.com). Para repetirlo:
+El build oficial usa un proyecto Firebase de Tucunar Labs. Para levantar el tuyo desde cero:
 
 1. **Proyecto**: en <https://console.firebase.google.com> → *Agregar proyecto* (o agregar Firebase a un
    proyecto de Google Cloud existente). Analytics no hace falta. Plan Spark (gratis) alcanza.
@@ -79,7 +79,8 @@ El proyecto actual ya está creado: `finanzas-hogar-b2ac` (cuenta alonso@tucunar
    (usa gcloud; variables `FIREBASE_PROJECT` y `GCLOUD_ACCOUNT`).
 4. **Google Sign-In**: *Authentication → Comenzar → Sign-in method → Google → Habilitar*, elegir correo de soporte.
 5. **App Android**: *Configuración del proyecto → Agregar app → Android*, paquete `cl.nuxapower.finanzas`.
-   Agregar las huellas SHA-1 de debug y release:
+   Ese `applicationId` es el histórico y se mantiene para no romper actualizaciones; un fork puede
+   cambiarlo, pero Android lo tratará como otra app. Agregar las huellas SHA-1 de debug y release:
    ```
    keytool -list -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | grep SHA1
    keytool -list -v -keystore keystore/release.jks -alias finanzas | grep SHA1
@@ -97,7 +98,7 @@ scripts/dev.sh --parar        # detiene los emuladores de Firebase (los datos qu
 
 - El build **debug** se conecta a los emuladores de Firebase (Auth :9099, Firestore :8085) en
   `10.0.2.2` (la máquina host vista desde el emulador Android) y la pantalla de login muestra
-  **"Entrar como nuxapower@gmail.com (dev)"**: el emulador de Auth acepta un ID token de Google falso,
+  **"Entrar como dev@example.com (dev)"**: el emulador de Auth acepta un ID token de Google falso,
   así el flujo es el mismo que en producción pero sin cuenta real. Los datos no tocan producción.
 - Los emuladores cargan las mismas `firestore.rules` (sirven para probarlas). UI: http://127.0.0.1:4000.
 - Teléfono físico en la LAN: `./gradlew assembleDebug -Pfinanzas.emulador=<ip-del-pc>`. Para que el debug
@@ -129,15 +130,15 @@ origen desconocido". En Xiaomi/HyperOS `adb install` suele quedar bloqueado por 
 activo "Instalar vía USB": es más simple `adb push app-release.apk /sdcard/Download/` e instalar desde *Archivos*.
 Para actualizar, instalar el APK nuevo encima (misma clave de firma); los datos viven en Firestore.
 
-### Actualizaciones por F-Droid (repositorio privado "Nuxapower Apps")
+### Actualizaciones por F-Droid (repositorio propio)
 
-Las versiones se publican en el repositorio F-Droid general de mis apps, que vive en `~/code/nuxapower-apps`
-(ver su README). Cada teléfono lo agrega una vez en F-Droid (o Neo Store) con la URL + huella y desde ahí
-recibe las actualizaciones.
+Las versiones se publican en el repositorio F-Droid que mantiene cada
+distribución. Cada teléfono lo agrega una vez en F-Droid (o Neo Store) con la
+URL + huella y desde ahí recibe las actualizaciones.
 
 ```
 ./gradlew :app:assembleRelease      # subir antes versionCode/versionName en app/build.gradle.kts
-scripts/publicar-apk.sh             # llama a ~/code/nuxapower-apps/publicar.sh con el APK release
+scripts/publicar-apk.sh             # publica el APK release en el repo F-Droid configurado
 ```
 
 Primer uso: una persona toca **Crear hogar** y comparte el código de 6 caracteres (Ajustes → compartir);
