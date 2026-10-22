@@ -1,6 +1,9 @@
 # Finanzas
 
-App Android privada para llevar gastos e ingresos de una pareja (máximo 2 personas por hogar).
+Finanzas is an open-source personal finance app by [Tucunar Labs](https://tucunar.com),
+a brand of Tucunar SpA.
+
+App Android para llevar gastos e ingresos de un hogar (máximo 2 personas por hogar).
 Kotlin + Jetpack Compose (Material 3), MVVM, Hilt, Firebase Auth (Google) + Cloud Firestore con caché offline.
 
 ## Funciones
@@ -160,3 +163,9 @@ la otra lo ingresa en **Unirme**.
   reordenan categorías, el widget se entera la próxima vez que la app corra.
 - Fuera de alcance (no implementado): metas, múltiples monedas, fotos, importación bancaria,
   notificaciones, división de deudas. (Presupuestos se agregó después a pedido.)
+
+## Licencia
+
+Apache License 2.0. Ver [`LICENSE`](LICENSE), [`NOTICE`](NOTICE) y
+[`TRADEMARK.md`](TRADEMARK.md). El código es abierto; la marca y las releases
+oficiales son de Tucunar SpA.
