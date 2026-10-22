@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Siembra datos de ejemplo en el emulador local de Firestore (nunca en producción).
 
-Requiere haber entrado en la app debug como nuxapower@gmail.com y creado el hogar.
+Requiere haber entrado en la app debug como dev@example.com y creado el hogar.
 Agrega una segunda persona ficticia, ~3 meses de movimientos y presupuestos.
 Uso: scripts/sembrar-dev.py [--limpiar]   (--limpiar borra movimientos y presupuestos antes)
 """
 import datetime as dt
 import json
+import os
 import random
 import sys
 import urllib.request
 
-PROYECTO = "finanzas-hogar-b2ac"
+PROYECTO = os.environ.get("FIREBASE_PROJECT", "demo-finanzas")
 BASE = f"http://127.0.0.1:8085/v1/projects/{PROYECTO}/databases/(default)/documents"
 CABECERAS = {"Authorization": "Bearer owner", "Content-Type": "application/json"}  # owner = sin reglas
 

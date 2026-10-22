@@ -3,7 +3,7 @@
 #   1. emuladores de Firebase (Auth :9099, Firestore :8085, UI http://127.0.0.1:4000) con las mismas
 #      firestore.rules; los datos persisten en .emulador/ entre sesiones,
 #   2. emulador Android (AVD pixel_36, script ~/bin/emu),
-#   3. compila el debug una vez, lo instala y lo abre. En la app: "Entrar como nuxapower@gmail.com (dev)".
+#   3. compila el debug una vez, lo instala y lo abre. En la app: "Entrar como dev@example.com (dev)".
 # Uso: scripts/dev.sh [--sin-compilar]     En un teléfono: DISPOSITIVO=<serial adb> scripts/dev.sh     Detener emuladores de Firebase: scripts/dev.sh --parar
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -22,7 +22,7 @@ if ! curl -s -o /dev/null http://127.0.0.1:9099; then
   mkdir -p .emulador
   JAVA_HOME=/usr/lib/jvm/java-26-openjdk PATH="/usr/lib/jvm/java-26-openjdk/bin:$PATH" \
     setsid nohup npx -y firebase-tools@15 emulators:start --only auth,firestore \
-      --project finanzas-hogar-b2ac --import .emulador --export-on-exit .emulador >"$LOG" 2>&1 < /dev/null &
+      --project "${FIREBASE_PROJECT:-demo-finanzas}" --import .emulador --export-on-exit .emulador >"$LOG" 2>&1 < /dev/null &
   for _ in $(seq 1 90); do
     curl -s -o /dev/null http://127.0.0.1:9099 && curl -s -o /dev/null http://127.0.0.1:8085 && break
     sleep 2
@@ -32,6 +32,10 @@ fi
 echo "Firebase local listo (UI: http://127.0.0.1:4000)"
 
 # google-services.json del debug (paquete .dev): se deriva del real; con emuladores no se valida.
+if [ ! -f app/google-services.json ]; then
+  echo "Falta app/google-services.json: descargalo de tu proyecto Firebase (ver README)." >&2
+  exit 1
+fi
 if [ ! -f app/src/debug/google-services.json ]; then
   python3 -c "import json;d=json.load(open('app/google-services.json'))
 for c in d['client']: c['client_info']['android_client_info']['package_name']='cl.nuxapower.finanzas.dev'

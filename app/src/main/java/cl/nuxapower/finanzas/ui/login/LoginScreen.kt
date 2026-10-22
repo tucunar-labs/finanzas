@@ -70,7 +70,7 @@ fun LoginScreen(vm: LoginViewModel = hiltViewModel()) {
             // Solo en debug con emuladores (en release la condición es constante y R8 lo elimina).
             if (BuildConfig.EMULADOR_HOST.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
-                OutlinedButton(onClick = vm::entrarDev) { Text("Entrar como nuxapower@gmail.com (dev)") }
+                OutlinedButton(onClick = vm::entrarDev) { Text("Entrar como dev@example.com (dev)") }
             }
         }
         estado.error?.let {

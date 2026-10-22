@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Publica firestore.rules en el proyecto Firebase (sin firebase CLI, vía API de Rules).
 set -euo pipefail
-P="${FIREBASE_PROJECT:-finanzas-hogar-b2ac}"
-CUENTA="${GCLOUD_ACCOUNT:-alonso@tucunar.com}"
+P="${FIREBASE_PROJECT:?export FIREBASE_PROJECT before running}"
+CUENTA="${GCLOUD_ACCOUNT:-$(gcloud config get-value account 2>/dev/null)}"
 cd "$(dirname "$0")/.."
 T=$(gcloud auth print-access-token --account="$CUENTA")
 API="https://firebaserules.googleapis.com/v1/projects/${P}"

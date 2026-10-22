@@ -18,3 +18,7 @@ dist/
 .emulador/
 *-debug.log
 app/src/debug/google-services.json
+
+# Python (scripts de siembra)
+__pycache__/
+*.pyc
